@@ -15,6 +15,7 @@ import '../main.dart';
 import '../constants.dart';
 import '../Widgets/BranchFilterService.dart'; // ✅ Added
 import '../Widgets/OrderUIComponents.dart'; // ✅ Shared UI components
+import '../utils/responsive_helper.dart'; // ✅ Responsive utility
 
 // Service for handling cross-screen order selection/highlighting
 class OrderSelectionService {
@@ -196,7 +197,8 @@ class _OrdersScreenState extends State<OrdersScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order status updated to "${StatusUtils.getDisplayText(newStatus)}"'),
+            content: Text(
+                'Order status updated to "${StatusUtils.getDisplayText(newStatus)}"'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 1),
           ),
@@ -221,7 +223,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final userScope = context.watch<UserScopeService>();
@@ -243,8 +244,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           ),
         ),
         actions: [
-          if (showBranchSelector)
-             _buildBranchSelector(userScope, branchFilter),
+          if (showBranchSelector) _buildBranchSelector(userScope, branchFilter),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
@@ -268,7 +268,8 @@ class _OrdersScreenState extends State<OrdersScreen>
   }
 
   // Same branch selector logic as DashboardScreen
-  Widget _buildBranchSelector(UserScopeService userScope, BranchFilterService branchFilter) {
+  Widget _buildBranchSelector(
+      UserScopeService userScope, BranchFilterService branchFilter) {
     return Container(
       margin: const EdgeInsets.only(right: 12),
       child: PopupMenuButton<String>(
@@ -291,7 +292,8 @@ class _OrdersScreenState extends State<OrdersScreen>
                 child: Text(
                   branchFilter.selectedBranchId == null
                       ? 'All Branches'
-                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
                   style: const TextStyle(
                     color: Colors.deepPurple,
                     fontWeight: FontWeight.w600,
@@ -309,25 +311,41 @@ class _OrdersScreenState extends State<OrdersScreen>
           PopupMenuItem<String>(
             value: BranchFilterService.allBranchesValue,
             child: Row(children: [
-               Icon(branchFilter.selectedBranchId == null ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == null ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               const Text('All Branches'),
+              Icon(
+                  branchFilter.selectedBranchId == null
+                      ? Icons.check_circle
+                      : Icons.circle_outlined,
+                  size: 18,
+                  color: branchFilter.selectedBranchId == null
+                      ? Colors.deepPurple
+                      : Colors.grey),
+              const SizedBox(width: 10),
+              const Text('All Branches'),
             ]),
           ),
           const PopupMenuDivider(),
           ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
-            value: branchId,
-            child: Row(children: [
-               Icon(branchFilter.selectedBranchId == branchId ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == branchId ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               Flexible(child: Text(branchFilter.getBranchName(branchId), overflow: TextOverflow.ellipsis)),
-            ]),
-          )),
+                value: branchId,
+                child: Row(children: [
+                  Icon(
+                      branchFilter.selectedBranchId == branchId
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 18,
+                      color: branchFilter.selectedBranchId == branchId
+                          ? Colors.deepPurple
+                          : Colors.grey),
+                  const SizedBox(width: 10),
+                  Flexible(
+                      child: Text(branchFilter.getBranchName(branchId),
+                          overflow: TextOverflow.ellipsis)),
+                ]),
+              )),
         ],
         onSelected: (value) => branchFilter.selectBranch(value),
       ),
     );
-  } 
+  }
 
   Widget _buildOrderTypeTabs() {
     return Container(
@@ -401,20 +419,26 @@ class _OrdersScreenState extends State<OrdersScreen>
                     Icons.schedule_rounded),
                 _buildEnhancedStatusChip('Preparing',
                     AppConstants.statusPreparing, Icons.restaurant_rounded),
-                _buildEnhancedStatusChip('Prepared',
-                    AppConstants.statusPrepared, Icons.check_circle_outline_rounded),
-                _buildEnhancedStatusChip('Served',
-                    AppConstants.statusServed, Icons.restaurant_menu_rounded),
-                _buildEnhancedStatusChip('Needs Assign',
-                    AppConstants.statusNeedsAssignment, Icons.person_pin_circle_outlined),
-                _buildEnhancedStatusChip('Rider Assigned',
-                    AppConstants.statusRiderAssigned, Icons.delivery_dining_rounded),
+                _buildEnhancedStatusChip(
+                    'Prepared',
+                    AppConstants.statusPrepared,
+                    Icons.check_circle_outline_rounded),
+                _buildEnhancedStatusChip('Served', AppConstants.statusServed,
+                    Icons.restaurant_menu_rounded),
+                _buildEnhancedStatusChip(
+                    'Needs Assign',
+                    AppConstants.statusNeedsAssignment,
+                    Icons.person_pin_circle_outlined),
+                _buildEnhancedStatusChip(
+                    'Rider Assigned',
+                    AppConstants.statusRiderAssigned,
+                    Icons.delivery_dining_rounded),
                 _buildEnhancedStatusChip('Picked Up',
                     AppConstants.statusPickedUp, Icons.local_shipping_rounded),
                 _buildEnhancedStatusChip('Delivered',
                     AppConstants.statusDelivered, Icons.check_circle_rounded),
-                _buildEnhancedStatusChip('Paid',
-                    AppConstants.statusPaid, Icons.payments_rounded),
+                _buildEnhancedStatusChip(
+                    'Paid', AppConstants.statusPaid, Icons.payments_rounded),
                 _buildEnhancedStatusChip('Collected',
                     AppConstants.statusCollected, Icons.shopping_bag_rounded),
                 _buildEnhancedStatusChip('Cancelled',
@@ -507,11 +531,13 @@ class _OrdersScreenState extends State<OrdersScreen>
   Widget _buildOrdersList(String orderType) {
     // ✅ FIX: Use watch for both so screen reacts to branch changes from backend
     final userScope = context.watch<UserScopeService>();
-    final branchFilter = context.watch<BranchFilterService>(); // Watch for filter changes
+    final branchFilter =
+        context.watch<BranchFilterService>(); // Watch for filter changes
 
     // Get branches to filter by (respects branch selector)
     // When "All Branches" is selected (null), getFilterBranchIds returns userScope.branchIds
-    final effectiveFilterIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final effectiveFilterIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     // ✅ IMPROVED: Add RefreshIndicator for pull-to-refresh
     return RefreshIndicator(
@@ -571,7 +597,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           }
 
           final docs = snapshot.data ?? [];
-          
+
           if (docs.isEmpty) {
             // ✅ IMPROVED: Wrap in ListView for pull-to-refresh to work on empty state
             return ListView(
@@ -587,10 +613,12 @@ class _OrdersScreenState extends State<OrdersScreen>
                             size: 64, color: Colors.grey[400]),
                         const SizedBox(height: 16),
                         Text('No orders found.',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 18)),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 18)),
                         const SizedBox(height: 8),
                         Text('Pull down to refresh.',
-                            style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+                            style: TextStyle(
+                                color: Colors.grey[400], fontSize: 14)),
                       ],
                     ),
                   ),
@@ -599,9 +627,42 @@ class _OrdersScreenState extends State<OrdersScreen>
             );
           }
 
+          // ✅ RESPONSIVE UPDATE: Use GridView for larger screens
+          if (ResponsiveHelper.isTablet(context) ||
+              ResponsiveHelper.isDesktop(context)) {
+            return GridView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.5, // Adjust based on content density
+              ),
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                final orderDoc = docs[index];
+                final isHighlighted = _shouldHighlightOrder &&
+                    (orderDoc.id == widget.initialOrderId ||
+                        orderDoc.id == _orderToScrollTo);
+
+                return _OrderCard(
+                  key: ValueKey(orderDoc.id),
+                  order: orderDoc,
+                  orderType: orderType,
+                  onStatusChange: updateOrderStatus,
+                  isHighlighted: isHighlighted,
+                  isProcessing: _processingOrderIds.contains(orderDoc.id),
+                );
+              },
+            );
+          }
+
           return ListView.separated(
             controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(), // ✅ Enable pull-down even with items
+            physics:
+                const AlwaysScrollableScrollPhysics(), // ✅ Enable pull-down even with items
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             itemCount: docs.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -626,7 +687,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 }
-
 
 class _OrderCard extends StatefulWidget {
   final QueryDocumentSnapshot<Map<String, dynamic>> order;
@@ -658,14 +718,15 @@ class _OrderCardState extends State<_OrderCard> {
   Color _getStatusColorForOrderType(String status, String orderType) =>
       StatusUtils.getColorForOrderType(status, orderType);
 
-
-  Future<void> _showRefundConfirmationDialog(BuildContext context, bool isApprove, String? imageUrl) async {
+  Future<void> _showRefundConfirmationDialog(
+      BuildContext context, bool isApprove, String? imageUrl) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
               Icon(
@@ -712,9 +773,11 @@ class _OrderCardState extends State<_OrderCard> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: isApprove ? Colors.green : Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+              child:
+                  const Text('Confirm', style: TextStyle(color: Colors.white)),
               onPressed: () {
                 Navigator.of(context).pop();
                 _handleRefundAction(isApprove, imageUrl);
@@ -865,18 +928,20 @@ class _OrderCardState extends State<_OrderCard> {
                     children: [
                       Icon(Icons.broken_image, color: Colors.grey, size: 32),
                       SizedBox(height: 4),
-                      Text('Image unavailable', 
+                      Text('Image unavailable',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
           ],
           if (_isProcessingRefund)
-            const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+            const Center(
+                child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircularProgressIndicator()))
           else
             Row(
               children: [
@@ -884,7 +949,8 @@ class _OrderCardState extends State<_OrderCard> {
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.close, size: 16),
                     label: const Text('Reject'),
-                    onPressed: () => _showRefundConfirmationDialog(context, false, refund['imageUrl']),
+                    onPressed: () => _showRefundConfirmationDialog(
+                        context, false, refund['imageUrl']),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.grey.shade700,
                       side: BorderSide(color: Colors.grey.shade400),
@@ -896,7 +962,8 @@ class _OrderCardState extends State<_OrderCard> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.check, size: 16),
                     label: const Text('Approve'),
-                    onPressed: () => _showRefundConfirmationDialog(context, true, refund['imageUrl']),
+                    onPressed: () => _showRefundConfirmationDialog(
+                        context, true, refund['imageUrl']),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
@@ -912,7 +979,7 @@ class _OrderCardState extends State<_OrderCard> {
 
   Future<void> _handleCancelPress(BuildContext context) async {
     final List<ConnectivityResult> connectivityResult =
-    await (Connectivity().checkConnectivity());
+        await (Connectivity().checkConnectivity());
 
     if (connectivityResult.contains(ConnectivityResult.none)) {
       if (context.mounted) {
@@ -941,28 +1008,33 @@ class _OrderCardState extends State<_OrderCard> {
     // Capture the ScaffoldMessengerState BEFORE async operations
     // This ensures we have a valid reference even if the dialog dismisses
     final scaffoldMessenger = ScaffoldMessenger.of(parentContext);
-    
+
     // data is not available here, accessing widget.order.data()
     final data = widget.order.data();
     // ROBUST BRANCH ID EXTRACTION
     // Try top-level branchId -> branchIds[0] -> items[0].branchId
     String? orderBranchId = data['branchId']?.toString();
-    
-    if (orderBranchId == null && data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty) {
+
+    if (orderBranchId == null &&
+        data['branchIds'] is List &&
+        (data['branchIds'] as List).isNotEmpty) {
       orderBranchId = data['branchIds'][0].toString();
     }
-    
+
     // Fallback: Check items for Pickup/Dine-in orders
-    if (orderBranchId == null && data['items'] is List && (data['items'] as List).isNotEmpty) {
-       final firstItem = data['items'][0];
-       if (firstItem is Map && firstItem['branchId'] != null) {
-         orderBranchId = firstItem['branchId'].toString();
-       }
+    if (orderBranchId == null &&
+        data['items'] is List &&
+        (data['items'] as List).isNotEmpty) {
+      final firstItem = data['items'][0];
+      if (firstItem is Map && firstItem['branchId'] != null) {
+        orderBranchId = firstItem['branchId'].toString();
+      }
     }
-    
+
     // Final Fallback for SuperAdmin or malformed data: Use current user's first branch
     if (orderBranchId == null) {
-      final userScope = Provider.of<UserScopeService>(parentContext, listen: false);
+      final userScope =
+          Provider.of<UserScopeService>(parentContext, listen: false);
       if (userScope.branchIds.isNotEmpty) {
         orderBranchId = userScope.branchIds.first;
       }
@@ -984,7 +1056,7 @@ class _OrderCardState extends State<_OrderCard> {
 
       if (mounted) {
         setState(() => _isAssigning = false);
-        
+
         // Use the pre-captured ScaffoldMessengerState (always valid)
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -1024,10 +1096,11 @@ class _OrderCardState extends State<_OrderCard> {
     final data = widget.order.data();
     final String orderType = widget.orderType;
     final String? riderId = data['riderId'];
-    
+
     // Get branch info (Moved here for access in buttons)
     // Get branch info (Moved here for access in buttons)
-    final branchId = (data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty)
+    final branchId =
+        (data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty)
             ? data['branchIds'][0].toString()
             : null;
 
@@ -1036,14 +1109,13 @@ class _OrderCardState extends State<_OrderCard> {
     final bool isDineIn = AppConstants.isDineInOrder(orderType);
     // Note: Pickup/Takeaway handled via !isDelivery && !isDineIn check
 
-
     final bool isAutoAssigning =
         data.containsKey('autoAssignStarted') && isDelivery;
     final bool needsManualAssignment =
         status == AppConstants.statusNeedsAssignment;
 
     const EdgeInsets btnPadding =
-    EdgeInsets.symmetric(horizontal: 14, vertical: 10);
+        EdgeInsets.symmetric(horizontal: 14, vertical: 10);
     const Size btnMinSize = Size(0, 40);
 
     // 1. Accept Order (Moves to Preparing)
@@ -1070,7 +1142,7 @@ class _OrderCardState extends State<_OrderCard> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1078,18 +1150,20 @@ class _OrderCardState extends State<_OrderCard> {
 
     // 2. Order-type-specific flow logic
     // ========================================
-    
+
     // DELIVERY: preparing → needs_rider_assignment → rider_assigned → pickedUp → delivered
     // PICKUP (prepaid): preparing → prepared → collected
     // TAKEAWAY (pay at counter): preparing → prepared → paid
     // DINE-IN: preparing → prepared → served → paid
-    
-    final bool isPickup = AppConstants.normalizeOrderType(orderType) == AppConstants.orderTypePickup;
-    final bool isTakeaway = AppConstants.normalizeOrderType(orderType) == AppConstants.orderTypeTakeaway;
-    
+
+    final bool isPickup = AppConstants.normalizeOrderType(orderType) ==
+        AppConstants.orderTypePickup;
+    final bool isTakeaway = AppConstants.normalizeOrderType(orderType) ==
+        AppConstants.orderTypeTakeaway;
+
     if (!isDelivery) {
       // ===== NON-DELIVERY ORDER FLOWS =====
-      
+
       // Step A: Mark as Prepared (Preparing → Prepared)
       if (status == AppConstants.statusPreparing) {
         buttons.add(
@@ -1103,12 +1177,13 @@ class _OrderCardState extends State<_OrderCard> {
               foregroundColor: Colors.white,
               padding: btnPadding,
               minimumSize: btnMinSize,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         );
       }
-      
+
       // Step B: Order-type-specific next action after Prepared
       if (status == AppConstants.statusPrepared) {
         if (isDineIn) {
@@ -1124,7 +1199,8 @@ class _OrderCardState extends State<_OrderCard> {
                 foregroundColor: Colors.white,
                 padding: btnPadding,
                 minimumSize: btnMinSize,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           );
@@ -1132,13 +1208,16 @@ class _OrderCardState extends State<_OrderCard> {
           // PICKUP: Check payment method
           // - Prepaid (online payment): Prepared → Collected
           // - Cash on pickup: Prepared → Paid
-          final String paymentMethod = (data['payment_method'] ?? data['paymentMethod'] ?? '').toString().toLowerCase();
-          final bool isPrepaid = paymentMethod == 'online' || 
-                                  paymentMethod == 'card' || 
-                                  paymentMethod == 'prepaid' ||
-                                  paymentMethod == 'apple_pay' ||
-                                  paymentMethod == 'google_pay';
-          
+          final String paymentMethod =
+              (data['payment_method'] ?? data['paymentMethod'] ?? '')
+                  .toString()
+                  .toLowerCase();
+          final bool isPrepaid = paymentMethod == 'online' ||
+              paymentMethod == 'card' ||
+              paymentMethod == 'prepaid' ||
+              paymentMethod == 'apple_pay' ||
+              paymentMethod == 'google_pay';
+
           if (isPrepaid) {
             // Prepaid pickup: Just mark as collected
             buttons.add(
@@ -1152,7 +1231,8 @@ class _OrderCardState extends State<_OrderCard> {
                   foregroundColor: Colors.white,
                   padding: btnPadding,
                   minimumSize: btnMinSize,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             );
@@ -1169,7 +1249,8 @@ class _OrderCardState extends State<_OrderCard> {
                   foregroundColor: Colors.white,
                   padding: btnPadding,
                   minimumSize: btnMinSize,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             );
@@ -1187,49 +1268,58 @@ class _OrderCardState extends State<_OrderCard> {
                 foregroundColor: Colors.white,
                 padding: btnPadding,
                 minimumSize: btnMinSize,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           );
         }
       }
-      
+
       // Step C: Dine-in Served → Paid
       if (status == AppConstants.statusServed && isDineIn) {
         buttons.add(
           ElevatedButton.icon(
             icon: const Icon(Icons.payments, size: 16),
             label: const Text('Mark Paid'),
-            onPressed: () => widget.onStatusChange(
-                widget.order.id, AppConstants.statusPaid),
+            onPressed: () =>
+                widget.onStatusChange(widget.order.id, AppConstants.statusPaid),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade700,
               foregroundColor: Colors.white,
               padding: btnPadding,
               minimumSize: btnMinSize,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         );
       }
-      
+
       // LEGACY SUPPORT: Handle old orders stuck on needs_rider_assignment
       // This ensures backward compatibility with orders created before this update
       if (status == AppConstants.statusNeedsAssignment) {
         buttons.add(
           ElevatedButton.icon(
-            icon: Icon(isDineIn ? Icons.restaurant_menu : Icons.local_mall, size: 16),
-            label: Text(isDineIn ? 'Mark Served' : (isPickup ? 'Collected' : 'Mark Paid')),
+            icon: Icon(isDineIn ? Icons.restaurant_menu : Icons.local_mall,
+                size: 16),
+            label: Text(isDineIn
+                ? 'Mark Served'
+                : (isPickup ? 'Collected' : 'Mark Paid')),
             onPressed: () => widget.onStatusChange(
-                widget.order.id, 
-                isDineIn ? AppConstants.statusServed : 
-                  (isPickup ? AppConstants.statusCollected : AppConstants.statusPaid)),
+                widget.order.id,
+                isDineIn
+                    ? AppConstants.statusServed
+                    : (isPickup
+                        ? AppConstants.statusCollected
+                        : AppConstants.statusPaid)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
               padding: btnPadding,
               minimumSize: btnMinSize,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         );
@@ -1251,7 +1341,7 @@ class _OrderCardState extends State<_OrderCard> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1259,11 +1349,13 @@ class _OrderCardState extends State<_OrderCard> {
 
     // 4. Order Completion and Assignment Logic (ONLY for delivery orders)
     if (isDelivery) {
-      final bool canAssign = (status == AppConstants.statusPreparing ||
-          needsManualAssignment);
+      final bool canAssign =
+          (status == AppConstants.statusPreparing || needsManualAssignment);
 
       // Only show assignment buttons if no rider is currently assigned
-      if (canAssign && !isAutoAssigning && (riderId == null || riderId.isEmpty)) {
+      if (canAssign &&
+          !isAutoAssigning &&
+          (riderId == null || riderId.isEmpty)) {
         buttons.add(
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -1277,19 +1369,21 @@ class _OrderCardState extends State<_OrderCard> {
                   final success = await RiderAssignmentService.autoAssignRider(
                     orderId: widget.order.id,
                   );
-                  
+
                   if (mounted) {
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Auto-assignment started! Finding nearest rider...'),
+                          content: Text(
+                              'Auto-assignment started! Finding nearest rider...'),
                           backgroundColor: Colors.blue,
                         ),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Could not start auto-assignment. Check conditions.'),
+                          content: Text(
+                              'Could not start auto-assignment. Check conditions.'),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -1306,16 +1400,18 @@ class _OrderCardState extends State<_OrderCard> {
                 ),
               ),
               const SizedBox(width: 8),
-              
+
               // 2. Manual Assignment Button
               ElevatedButton.icon(
                 icon: const Icon(Icons.person_add, size: 16),
-                label: Text(
-                    needsManualAssignment ? 'Assign Manually' : 'Manual Assign'),
+                label: Text(needsManualAssignment
+                    ? 'Assign Manually'
+                    : 'Manual Assign'),
                 onPressed: () => _assignRiderManually(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                  needsManualAssignment ? Colors.orange : Colors.grey.shade700,
+                  backgroundColor: needsManualAssignment
+                      ? Colors.orange
+                      : Colors.grey.shade700,
                   foregroundColor: Colors.white,
                   padding: btnPadding,
                   minimumSize: btnMinSize,
@@ -1356,7 +1452,7 @@ class _OrderCardState extends State<_OrderCard> {
                 constraints: const BoxConstraints(minHeight: 40),
                 child: Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -1403,7 +1499,7 @@ class _OrderCardState extends State<_OrderCard> {
 
     // 5. Return Logic (For Pickup/Dine-in ONLY) - Post-Completion
     if (!isDelivery && status == AppConstants.statusDelivered) {
-       buttons.add(
+      buttons.add(
         ElevatedButton.icon(
           icon: const Icon(Icons.assignment_return, size: 16),
           label: const Text('Return / Exchange'),
@@ -1416,7 +1512,7 @@ class _OrderCardState extends State<_OrderCard> {
             if (result != null) {
               final type = result['type'];
               final reason = result['reason'];
-              
+
               if (type == 'exchange') {
                 // For exchange, we need to mark it as exchange first so revenue isn't lost
                 // We do this direct update to avoid changing the method signature of onStatusChange everywhere
@@ -1424,26 +1520,22 @@ class _OrderCardState extends State<_OrderCard> {
                     .collection(AppConstants.collectionOrders)
                     .doc(widget.order.id)
                     .update({
-                      'isExchange': true,
-                      'exchangeDetails': {
-                        'reason': reason,
-                        'timestamp': FieldValue.serverTimestamp(),
-                        // 'adminId': ... (could add user email if available in this context)
-                      }
-                    });
-                    
-                widget.onStatusChange(
-                  widget.order.id, 
-                  AppConstants.statusPreparing, // Reset to Preparing
-                  reason: "Exchange: $reason"
-                );
+                  'isExchange': true,
+                  'exchangeDetails': {
+                    'reason': reason,
+                    'timestamp': FieldValue.serverTimestamp(),
+                    // 'adminId': ... (could add user email if available in this context)
+                  }
+                });
+
+                widget.onStatusChange(widget.order.id,
+                    AppConstants.statusPreparing, // Reset to Preparing
+                    reason: "Exchange: $reason");
               } else {
                 // Refund
                 widget.onStatusChange(
-                  widget.order.id, 
-                  AppConstants.statusRefunded,
-                  reason: reason
-                );
+                    widget.order.id, AppConstants.statusRefunded,
+                    reason: reason);
               }
             }
           },
@@ -1452,7 +1544,8 @@ class _OrderCardState extends State<_OrderCard> {
             foregroundColor: Colors.white,
             padding: btnPadding,
             minimumSize: btnMinSize,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1475,7 +1568,7 @@ class _OrderCardState extends State<_OrderCard> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1498,7 +1591,6 @@ class _OrderCardState extends State<_OrderCard> {
 
   double _getStatusFontSize(String status, {String? orderType}) =>
       StatusUtils.getFontSize(status, orderType: orderType);
-
 
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
@@ -1551,7 +1643,7 @@ class _OrderCardState extends State<_OrderCard> {
             child: Text.rich(TextSpan(
                 text: name,
                 style:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                 children: [
                   TextSpan(
                       text: ' (x$qty)',
@@ -1601,17 +1693,17 @@ class _OrderCardState extends State<_OrderCard> {
     final String orderTypeLower = widget.orderType.toLowerCase();
 
     final DateTime? rawTimestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final DateTime? timestamp = rawTimestamp != null
-        ? TimeUtils.getRestaurantTime(rawTimestamp)
-        : null;
+    final DateTime? timestamp =
+        rawTimestamp != null ? TimeUtils.getRestaurantTime(rawTimestamp) : null;
 
-    final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
     final double deliveryFee = (data['deliveryFee'] as num? ?? 0.0).toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
 
-    final bool isAutoAssigning = data.containsKey('autoAssignStarted') &&
-        orderTypeLower == 'delivery';
+    final bool isAutoAssigning =
+        data.containsKey('autoAssignStarted') && orderTypeLower == 'delivery';
     final bool needsManualAssignment =
         status == AppConstants.statusNeedsAssignment;
 
@@ -1621,7 +1713,8 @@ class _OrderCardState extends State<_OrderCard> {
 
     // Get branch info for badge
     // Get branch info for badge
-    final branchId = (data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty)
+    final branchId =
+        (data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty)
             ? data['branchIds'][0].toString()
             : null;
     final userScope = context.read<UserScopeService>();
@@ -1629,16 +1722,19 @@ class _OrderCardState extends State<_OrderCard> {
     final showBranchBadge = branchId != null && userScope.branchIds.length > 1;
 
     // --- PAYMENT METHOD DETECTION ---
-    final String paymentMethod = (data['payment_method'] ?? data['paymentMethod'] ?? '').toString().toLowerCase();
-    final bool isCashPayment = paymentMethod == 'cash' || 
-                                paymentMethod == 'cod' || 
-                                paymentMethod == 'cash_on_delivery' ||
-                                paymentMethod.isEmpty; // Treat empty as cash for safety
-    final bool isPrepaid = paymentMethod == 'online' || 
-                           paymentMethod == 'card' || 
-                           paymentMethod == 'prepaid' ||
-                           paymentMethod == 'apple_pay' ||
-                           paymentMethod == 'google_pay';
+    final String paymentMethod =
+        (data['payment_method'] ?? data['paymentMethod'] ?? '')
+            .toString()
+            .toLowerCase();
+    final bool isCashPayment = paymentMethod == 'cash' ||
+        paymentMethod == 'cod' ||
+        paymentMethod == 'cash_on_delivery' ||
+        paymentMethod.isEmpty; // Treat empty as cash for safety
+    final bool isPrepaid = paymentMethod == 'online' ||
+        paymentMethod == 'card' ||
+        paymentMethod == 'prepaid' ||
+        paymentMethod == 'apple_pay' ||
+        paymentMethod == 'google_pay';
 
     // --- BANNER LOGIC ---
     Color? bannerColor;
@@ -1652,14 +1748,14 @@ class _OrderCardState extends State<_OrderCard> {
       bannerText = 'RETURN REQUEST';
       bannerIcon = Icons.report_problem_outlined;
       showBanner = true;
-    } 
+    }
     // Priority 2: Refunded order
     else if (status == AppConstants.statusRefunded || status == 'refunded') {
       bannerColor = Colors.pink;
       bannerText = 'RETURNED ORDER';
       bannerIcon = Icons.assignment_return_outlined;
       showBanner = true;
-    } 
+    }
     // Priority 3: Exchange order
     else if (data['isExchange'] == true) {
       bannerColor = Colors.teal;
@@ -1668,9 +1764,9 @@ class _OrderCardState extends State<_OrderCard> {
       showBanner = true;
     }
     // Priority 4: Cash payment (only for active orders that need payment collection)
-    else if (isCashPayment && 
-             !AppConstants.isTerminalStatus(status) && 
-             status != AppConstants.statusCancelled) {
+    else if (isCashPayment &&
+        !AppConstants.isTerminalStatus(status) &&
+        status != AppConstants.statusCancelled) {
       bannerColor = Colors.orange.shade700;
       bannerText = '💵 CASH PAYMENT';
       bannerIcon = Icons.attach_money;
@@ -1692,7 +1788,8 @@ class _OrderCardState extends State<_OrderCard> {
     }
 
     return Container(
-      clipBehavior: Clip.antiAlias, // Ensure banner doesn't overflow rounded corners
+      clipBehavior:
+          Clip.antiAlias, // Ensure banner doesn't overflow rounded corners
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1717,7 +1814,7 @@ class _OrderCardState extends State<_OrderCard> {
               offset: const Offset(0, 0),
             ),
         ],
-        border: showBanner 
+        border: showBanner
             ? Border.all(color: bannerColor!, width: 2) // ✅ Dynamic border
             : widget.isHighlighted
                 ? Border.all(color: Colors.blue, width: 2)
@@ -1751,111 +1848,164 @@ class _OrderCardState extends State<_OrderCard> {
           Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          title: Row(
-            children: [
-              if (widget.isHighlighted)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                      color: Colors.blue, shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_forward,
-                      color: Colors.white, size: 12),
-                ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    Icon(Icons.receipt_long_outlined,
-                        color: _getStatusColor(status), size: 20),
-                    if (isAutoAssigning)
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                              color: Colors.blue,
-                              borderRadius: BorderRadius.circular(6)),
-                          child: const Icon(Icons.autorenew,
-                              color: Colors.white, size: 8),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Order #$orderNumber',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: widget.isHighlighted
-                                ? Colors.blue.shade800
-                                : Colors.black87)),
-                    const SizedBox(height: 4),
-                    Text(
-                        timestamp != null
-                            ? DateFormat('MMM dd, yyyy hh:mm a')
-                            .format(timestamp)
-                            : 'No date',
-                        style: TextStyle(
-                            color: widget.isHighlighted
-                                ? Colors.blue.shade600
-                                : Colors.grey[600],
-                            fontSize: 12)),
-                    if (showBranchBadge) ...[ 
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          // Branch badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.store, size: 10, color: Colors.grey[700]),
-                                const SizedBox(width: 4),
-                                Builder(builder: (context) {
-                                  final branchFilter = context.watch<BranchFilterService>();
-                                  return Text(
-                                    branchFilter.getBranchName(branchId!),
-                                    style: TextStyle(
-                                      color: Colors.grey[800],
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  );
-                                }),
-                              ],
+              tilePadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              title: Row(
+                children: [
+                  if (widget.isHighlighted)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                          color: Colors.blue, shape: BoxShape.circle),
+                      child: const Icon(Icons.arrow_forward,
+                          color: Colors.white, size: 12),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Stack(
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            color: _getStatusColor(status), size: 20),
+                        if (isAutoAssigning)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: const Icon(Icons.autorenew,
+                                  color: Colors.white, size: 8),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          // Payment method badge
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Order #$orderNumber',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: widget.isHighlighted
+                                    ? Colors.blue.shade800
+                                    : Colors.black87)),
+                        const SizedBox(height: 4),
+                        Text(
+                            timestamp != null
+                                ? DateFormat('MMM dd, yyyy hh:mm a')
+                                    .format(timestamp)
+                                : 'No date',
+                            style: TextStyle(
+                                color: widget.isHighlighted
+                                    ? Colors.blue.shade600
+                                    : Colors.grey[600],
+                                fontSize: 12)),
+                        if (showBranchBadge) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              // Branch badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                      color: Colors.grey.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.store,
+                                        size: 10, color: Colors.grey[700]),
+                                    const SizedBox(width: 4),
+                                    Builder(builder: (context) {
+                                      final branchFilter =
+                                          context.watch<BranchFilterService>();
+                                      return Text(
+                                        branchFilter.getBranchName(branchId!),
+                                        style: TextStyle(
+                                          color: Colors.grey[800],
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              // Payment method badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isCashPayment
+                                      ? Colors.orange.withOpacity(0.15)
+                                      : Colors.green.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isCashPayment
+                                        ? Colors.orange.withOpacity(0.5)
+                                        : Colors.green.withOpacity(0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isCashPayment
+                                          ? Icons.attach_money
+                                          : Icons.credit_card,
+                                      size: 10,
+                                      color: isCashPayment
+                                          ? Colors.orange[800]
+                                          : Colors.green[800],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      AppConstants.getPaymentDisplayText(
+                                          paymentMethod),
+                                      style: TextStyle(
+                                        color: isCashPayment
+                                            ? Colors.orange[900]
+                                            : Colors.green[900],
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        // Show payment badge even without branch badge
+                        if (!showBranchBadge) ...[
+                          const SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isCashPayment 
-                                  ? Colors.orange.withOpacity(0.15) 
+                              color: isCashPayment
+                                  ? Colors.orange.withOpacity(0.15)
                                   : Colors.green.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: isCashPayment 
-                                    ? Colors.orange.withOpacity(0.5) 
+                                color: isCashPayment
+                                    ? Colors.orange.withOpacity(0.5)
                                     : Colors.green.withOpacity(0.5),
                               ),
                             ),
@@ -1863,15 +2013,22 @@ class _OrderCardState extends State<_OrderCard> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  isCashPayment ? Icons.attach_money : Icons.credit_card,
+                                  isCashPayment
+                                      ? Icons.attach_money
+                                      : Icons.credit_card,
                                   size: 10,
-                                  color: isCashPayment ? Colors.orange[800] : Colors.green[800],
+                                  color: isCashPayment
+                                      ? Colors.orange[800]
+                                      : Colors.green[800],
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  AppConstants.getPaymentDisplayText(paymentMethod),
+                                  AppConstants.getPaymentDisplayText(
+                                      paymentMethod),
                                   style: TextStyle(
-                                    color: isCashPayment ? Colors.orange[900] : Colors.green[900],
+                                    color: isCashPayment
+                                        ? Colors.orange[900]
+                                        : Colors.green[900],
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1880,231 +2037,201 @@ class _OrderCardState extends State<_OrderCard> {
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                    // Show payment badge even without branch badge
-                    if (!showBranchBadge) ...[
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isCashPayment 
-                              ? Colors.orange.withOpacity(0.15) 
-                              : Colors.green.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: isCashPayment 
-                                ? Colors.orange.withOpacity(0.5) 
-                                : Colors.green.withOpacity(0.5),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isCashPayment ? Icons.attach_money : Icons.credit_card,
-                              size: 10,
-                              color: isCashPayment ? Colors.orange[800] : Colors.green[800],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              AppConstants.getPaymentDisplayText(paymentMethod),
+                        if (isAutoAssigning) ...[
+                          const SizedBox(height: 4),
+                          const Text('Auto-assigning rider...',
                               style: TextStyle(
-                                color: isCashPayment ? Colors.orange[900] : Colors.green[900],
+                                  color: Colors.blue,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500)),
+                        ],
+                        // Only show "needs manual assignment" badge for delivery orders
+                        if (needsManualAssignment &&
+                            orderTypeLower == 'delivery') ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                  color: Colors.orange.withOpacity(0.3)),
+                            ),
+                            child: const Text('Needs manual assignment',
+                                style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                        ],
+                        if (hasPendingRefund) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                  color: Colors.red.withOpacity(0.3)),
+                            ),
+                            child: const Text(
+                              'REFUND REQUESTED',
+                              style: TextStyle(
+                                color: Colors.red,
                                 fontSize: 10,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (isAutoAssigning) ...[
-                      const SizedBox(height: 4),
-                      const Text('Auto-assigning rider...',
-                          style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500)),
-                    ],
-                    // Only show "needs manual assignment" badge for delivery orders
-                    if (needsManualAssignment && orderTypeLower == 'delivery') ...[
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border:
-                          Border.all(color: Colors.orange.withOpacity(0.3)),
-                        ),
-                        child: const Text('Needs manual assignment',
-                            style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500)),
-                      ),
-                    ],
-                    if (hasPendingRefund) ...[
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border:
-                          Border.all(color: Colors.red.withOpacity(0.3)),
-                        ),
-                        child: const Text(
-                          'REFUND REQUESTED',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          trailing: ConstrainedBox(
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.3),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getStatusColor(status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border:
-                Border.all(color: _getStatusColor(status).withOpacity(0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _getStatusColorForOrderType(status, orderTypeLower))),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(_getStatusDisplayText(status, orderType: orderTypeLower),
-                        style: TextStyle(
-                            color: _getStatusColorForOrderType(status, orderTypeLower),
-                            fontWeight: FontWeight.bold,
-                            fontSize: _getStatusFontSize(status, orderType: orderTypeLower),
-                            overflow: TextOverflow.ellipsis),
-                        maxLines: 1),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
+              trailing: ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.3),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: _getStatusColor(status).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _getStatusColorForOrderType(
+                                  status, orderTypeLower))),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                            _getStatusDisplayText(status,
+                                orderType: orderTypeLower),
+                            style: TextStyle(
+                                color: _getStatusColorForOrderType(
+                                    status, orderTypeLower),
+                                fontWeight: FontWeight.bold,
+                                fontSize: _getStatusFontSize(status,
+                                    orderType: orderTypeLower),
+                                overflow: TextOverflow.ellipsis),
+                            maxLines: 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              children: [
+                _buildRefundManagementSection(data),
+                _buildSectionHeader('Customer Details', Icons.person_outline),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      if (widget.orderType == 'delivery') ...[
+                        _buildDetailRow(Icons.person, 'Customer:',
+                            data['customerName'] ?? 'N/A'),
+                        _buildDetailRow(Icons.phone, 'Phone:',
+                            data['customerPhone'] ?? 'N/A'),
+                        _buildDetailRow(Icons.location_on, 'Address:',
+                            '${data['deliveryAddress']?['street'] ?? ''}, ${data['deliveryAddress']?['city'] ?? ''}'),
+                        if (data['riderId']?.isNotEmpty == true)
+                          _buildDetailRow(
+                              Icons.delivery_dining, 'Rider:', data['riderId']),
+                      ],
+                      if (widget.orderType == 'pickup') ...[
+                        _buildDetailRow(Icons.store, 'Pickup Branch',
+                            data['branchIds']?.join(', ') ?? 'N/A'),
+                      ],
+                      if (widget.orderType == 'takeaway') ...[
+                        _buildDetailRow(
+                            Icons.directions_car,
+                            'Car Plate:',
+                            (data['carPlateNumber']?.toString().isNotEmpty ??
+                                    false)
+                                ? data['carPlateNumber']
+                                : 'N/A'),
+                        if ((data['specialInstructions']
+                                ?.toString()
+                                .isNotEmpty ??
+                            false))
+                          _buildDetailRow(Icons.note, 'Instructions:',
+                              data['specialInstructions']),
+                      ] else if (widget.orderType == 'dine_in') ...[
+                        _buildDetailRow(
+                            Icons.table_restaurant,
+                            'Table(s):',
+                            data['tableNumber'] != null
+                                ? (data['tableNumber'] as String)
+                                : 'N/A'),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildSectionHeader('Ordered Items', Icons.list_alt),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                      children:
+                          items.map((item) => _buildItemRow(item)).toList()),
+                ),
+                const SizedBox(height: 20),
+                _buildSectionHeader('Order Summary', Icons.summarize),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSummaryRow('Subtotal', subtotal),
+                      if (deliveryFee > 0)
+                        _buildSummaryRow('Delivery Fee', deliveryFee),
+                      const Divider(height: 20),
+                      _buildSummaryRow('Total Amount', totalAmount,
+                          isTotal: true),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildSectionHeader('Actions', Icons.touch_app),
+                const SizedBox(height: 16),
+                _buildActionButtons(context, status),
+              ],
             ),
           ),
-          children: [
-            _buildRefundManagementSection(data),
-
-            _buildSectionHeader('Customer Details', Icons.person_outline),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                children: [
-                  if (widget.orderType == 'delivery') ...[
-                    _buildDetailRow(Icons.person, 'Customer:',
-                        data['customerName'] ?? 'N/A'),
-                    _buildDetailRow(
-                        Icons.phone, 'Phone:', data['customerPhone'] ?? 'N/A'),
-                    _buildDetailRow(Icons.location_on, 'Address:',
-                        '${data['deliveryAddress']?['street'] ?? ''}, ${data['deliveryAddress']?['city'] ?? ''}'),
-                    if (data['riderId']?.isNotEmpty == true)
-                      _buildDetailRow(
-                          Icons.delivery_dining, 'Rider:', data['riderId']),
-                  ],
-                  if (widget.orderType == 'pickup') ...[
-                    _buildDetailRow(Icons.store, 'Pickup Branch',
-                        data['branchIds']?.join(', ') ?? 'N/A'),
-                  ],
-                  if (widget.orderType == 'takeaway') ...[
-                    _buildDetailRow(
-                        Icons.directions_car,
-                        'Car Plate:',
-                        (data['carPlateNumber']?.toString().isNotEmpty ?? false)
-                            ? data['carPlateNumber']
-                            : 'N/A'),
-                    if ((data['specialInstructions']?.toString().isNotEmpty ??
-                        false))
-                      _buildDetailRow(Icons.note, 'Instructions:',
-                          data['specialInstructions']),
-                  ] else if (widget.orderType == 'dine_in') ...[
-                    _buildDetailRow(
-                        Icons.table_restaurant,
-                        'Table(s):',
-                        data['tableNumber'] != null
-                            ? (data['tableNumber'] as String)
-                            : 'N/A'),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildSectionHeader('Ordered Items', Icons.list_alt),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                  children: items.map((item) => _buildItemRow(item)).toList()),
-            ),
-            const SizedBox(height: 20),
-            _buildSectionHeader('Order Summary', Icons.summarize),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                children: [
-                  _buildSummaryRow('Subtotal', subtotal),
-                  if (deliveryFee > 0)
-                    _buildSummaryRow('Delivery Fee', deliveryFee),
-                  const Divider(height: 20),
-                  _buildSummaryRow('Total Amount', totalAmount, isTotal: true),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildSectionHeader('Actions', Icons.touch_app),
-            const SizedBox(height: 16),
-            _buildActionButtons(context, status),
-          ],
-        ),
-      ),
         ],
       ),
     );
   }
 }
-
-
 
 class _OrderPopupDialog extends StatefulWidget {
   final DocumentSnapshot order;
@@ -2317,7 +2444,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     // Capture references BEFORE async operations
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    
+
     final userScope = context.read<UserScopeService>();
     final currentBranchId = userScope.branchId;
 
@@ -2340,7 +2467,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
 
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         // Use pre-captured ScaffoldMessengerState (safe across async gaps)
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -2348,7 +2475,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             backgroundColor: result.backgroundColor,
           ),
         );
-        
+
         if (result.isSuccess) {
           navigator.pop(); // Close popup only on success
         }
@@ -2382,13 +2509,15 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
         status == AppConstants.statusNeedsAssignment;
 
     const EdgeInsets btnPadding =
-    EdgeInsets.symmetric(horizontal: 14, vertical: 10);
+        EdgeInsets.symmetric(horizontal: 14, vertical: 10);
     const Size btnMinSize = Size(0, 40);
 
     final statusLower = status.toLowerCase();
 
     // ✅ Updated to check for refunded
-    if (statusLower != 'pending' && statusLower != 'cancelled' && statusLower != 'refunded') {
+    if (statusLower != 'pending' &&
+        statusLower != 'cancelled' &&
+        statusLower != 'refunded') {
       buttons.add(
         OutlinedButton.icon(
           icon: const Icon(Icons.print, size: 16),
@@ -2404,7 +2533,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -2415,35 +2544,37 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
         ElevatedButton.icon(
           icon: const Icon(Icons.check, size: 16),
           label: const Text('Accept Order'),
-          onPressed: () => updateOrderStatus(
-              orderId, AppConstants.statusPreparing),
+          onPressed: () =>
+              updateOrderStatus(orderId, AppConstants.statusPreparing),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
     }
 
     // Show completion buttons for non-delivery orders when preparing OR needs_rider_assignment
-    if (!isDelivery && (status == AppConstants.statusPreparing || needsManualAssignment)) {
+    if (!isDelivery &&
+        (status == AppConstants.statusPreparing || needsManualAssignment)) {
       buttons.add(
         ElevatedButton.icon(
-          icon: Icon(isDineIn ? Icons.restaurant_menu : Icons.local_mall, size: 16),
+          icon: Icon(isDineIn ? Icons.restaurant_menu : Icons.local_mall,
+              size: 16),
           label: Text(AppConstants.getCompletionButtonText(orderType)),
-          onPressed: () => updateOrderStatus(
-              orderId, AppConstants.statusDelivered),
+          onPressed: () =>
+              updateOrderStatus(orderId, AppConstants.statusDelivered),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green.shade700,
             foregroundColor: Colors.white,
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -2461,7 +2592,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             onPressed: () => _assignRider(orderId),
             style: ElevatedButton.styleFrom(
               backgroundColor:
-              needsManualAssignment ? Colors.orange : Colors.blue,
+                  needsManualAssignment ? Colors.orange : Colors.blue,
               foregroundColor: Colors.white,
               padding: btnPadding,
               minimumSize: btnMinSize,
@@ -2478,8 +2609,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
           ElevatedButton.icon(
             icon: const Icon(Icons.local_shipping, size: 16),
             label: const Text('Mark as Picked Up'),
-            onPressed: () => updateOrderStatus(
-                orderId, AppConstants.statusPickedUp),
+            onPressed: () =>
+                updateOrderStatus(orderId, AppConstants.statusPickedUp),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.indigo,
               foregroundColor: Colors.white,
@@ -2497,8 +2628,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
           ElevatedButton.icon(
             icon: const Icon(Icons.task_alt, size: 16),
             label: const Text('Mark as Delivered'),
-            onPressed: () => updateOrderStatus(
-                orderId, AppConstants.statusDelivered),
+            onPressed: () =>
+                updateOrderStatus(orderId, AppConstants.statusDelivered),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
@@ -2547,12 +2678,14 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                     await RiderAssignmentService.cancelAutoAssignment(orderId);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Auto-assignment stopped')),
+                        const SnackBar(
+                            content: Text('Auto-assignment stopped')),
                       );
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -2572,7 +2705,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
           ),
         );
       }
-      
+
       // Show "Restart Auto-Assignment" for orders that need assignment but aren't auto-assigning
       if (needsManualAssignment && !isAutoAssigning && riderId.isEmpty) {
         buttons.add(
@@ -2580,12 +2713,13 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             icon: const Icon(Icons.refresh, size: 16),
             label: const Text('Restart Auto-Assignment'),
             onPressed: () async {
-              final success = await RiderAssignmentService.autoAssignRider(orderId: orderId);
+              final success = await RiderAssignmentService.autoAssignRider(
+                  orderId: orderId);
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success 
-                        ? 'Auto-assignment restarted' 
+                    content: Text(success
+                        ? 'Auto-assignment restarted'
                         : 'Failed to restart auto-assignment'),
                     backgroundColor: success ? Colors.green : Colors.red,
                   ),
@@ -2597,7 +2731,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
               side: const BorderSide(color: Colors.blue),
               padding: btnPadding,
               minimumSize: btnMinSize,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         );
@@ -2605,10 +2740,12 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     }
 
     if (status != AppConstants.statusCancelled &&
-        status != AppConstants.statusDelivered &&
-        status != 'refunded' &&
-        status != AppConstants.statusPickedUp // Don't cancel after picked up usually
-    ) {
+            status != AppConstants.statusDelivered &&
+            status != 'refunded' &&
+            status !=
+                AppConstants
+                    .statusPickedUp // Don't cancel after picked up usually
+        ) {
       // NOTE: The previous condition was looser. Here is the strict "Terminal State" check logic you requested:
       // Show Cancel button ONLY if NOT terminal.
       // Terminal states: Cancelled, Delivered, Refunded.
@@ -2639,7 +2776,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -2685,7 +2822,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             flex: 2,
             child: Text(label,
                 style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           ),
           Expanded(
             flex: 3,
@@ -2713,7 +2850,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
               TextSpan(
                 text: name,
                 style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 children: [
                   TextSpan(
                     text: ' (x$qty)',
@@ -2773,7 +2910,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
     final status = data['status']?.toString() ?? 'pending';
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
     final double deliveryFee = (data['deliveryFee'] as num? ?? 0.0).toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
@@ -2807,7 +2945,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                         Text(
                             timestamp != null
                                 ? DateFormat('MMM dd, yyyy hh:mm a')
-                                .format(timestamp)
+                                    .format(timestamp)
                                 : 'No date',
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 14)),
@@ -2816,7 +2954,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                   ),
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _getStatusColor(status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -2844,9 +2982,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                 ],
               ),
               const SizedBox(height: 20),
-
               _buildRefundManagementSection(data),
-
               _buildSectionHeader('Customer Details', Icons.person_outline),
               const SizedBox(height: 12),
               Container(
@@ -2887,7 +3023,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                     border: Border.all(color: Colors.grey[200]!)),
                 child: Column(
                     children:
-                    items.map((item) => _buildItemRow(item)).toList()),
+                        items.map((item) => _buildItemRow(item)).toList()),
               ),
               const SizedBox(height: 20),
               _buildSectionHeader('Order Summary', Icons.summarize),
@@ -2918,7 +3054,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed:
-                  _isLoading ? null : () => Navigator.of(context).pop(),
+                      _isLoading ? null : () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2939,7 +3075,6 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
 }
 
 // CancellationReasonDialog is now imported from '../Widgets/CancellationDialog.dart'
-
 
 class _RiderSelectionDialog extends StatelessWidget {
   final String? currentBranchId;
@@ -3177,7 +3312,8 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
                 ),
                 Expanded(
                   child: RadioListTile<String>(
-                    title: const Text('Exchange', style: TextStyle(fontSize: 14)),
+                    title:
+                        const Text('Exchange', style: TextStyle(fontSize: 14)),
                     value: 'exchange',
                     groupValue: _returnType,
                     contentPadding: EdgeInsets.zero,
@@ -3189,7 +3325,7 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            
+
             const Text(
               'Select a reason:',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -3203,12 +3339,14 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
                 return ChoiceChip(
                   label: Text(reason),
                   selected: isSelected,
-                  selectedColor: _returnType == 'exchange' 
-                      ? Colors.teal.shade100 
+                  selectedColor: _returnType == 'exchange'
+                      ? Colors.teal.shade100
                       : Colors.pink.shade100,
                   labelStyle: TextStyle(
-                    color: isSelected 
-                        ? (_returnType == 'exchange' ? Colors.teal.shade900 : Colors.pink.shade900) 
+                    color: isSelected
+                        ? (_returnType == 'exchange'
+                            ? Colors.teal.shade900
+                            : Colors.pink.shade900)
                         : Colors.black87,
                   ),
                   onSelected: (selected) {
@@ -3216,7 +3354,7 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
                       if (selected) {
                         _selectedReason = reason;
                         if (reason != 'Other') {
-                           _reasonController.text = reason;
+                          _reasonController.text = reason;
                         } else {
                           _reasonController.clear();
                         }
@@ -3240,27 +3378,27 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
               maxLines: 2,
             ),
             if (_returnType == 'exchange') ...[
-               const SizedBox(height: 12),
-               Container(
-                 padding: const EdgeInsets.all(8),
-                 decoration: BoxDecoration(
-                   color: Colors.teal.shade50,
-                   borderRadius: BorderRadius.circular(8),
-                   border: Border.all(color: Colors.teal.shade200),
-                 ),
-                 child: const Row(
-                   children: [
-                     Icon(Icons.info_outline, color: Colors.teal, size: 16),
-                     SizedBox(width: 8),
-                     Expanded(
-                       child: Text(
-                         'Exchange will reset order status to "Preparing". Revenue will NOT be deducted.',
-                         style: TextStyle(fontSize: 12, color: Colors.teal),
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.teal, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Exchange will reset order status to "Preparing". Revenue will NOT be deducted.',
+                        style: TextStyle(fontSize: 12, color: Colors.teal),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
@@ -3272,18 +3410,19 @@ class _ReturnOptionsDialogState extends State<_ReturnOptionsDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: _returnType == 'exchange' ? Colors.teal : Colors.pink,
+            backgroundColor:
+                _returnType == 'exchange' ? Colors.teal : Colors.pink,
             foregroundColor: Colors.white,
           ),
           onPressed: _selectedReason == null
               ? null
               : () {
-                  Navigator.pop(context, {
-                    'type': _returnType,
-                    'reason': _reasonController.text
-                  });
+                  Navigator.pop(context,
+                      {'type': _returnType, 'reason': _reasonController.text});
                 },
-          child: Text(_returnType == 'exchange' ? 'Confirm Exchange' : 'Confirm Refund'),
+          child: Text(_returnType == 'exchange'
+              ? 'Confirm Exchange'
+              : 'Confirm Refund'),
         ),
       ],
     );

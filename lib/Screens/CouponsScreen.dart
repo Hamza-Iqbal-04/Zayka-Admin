@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class CouponManagementScreen extends StatelessWidget {
   const CouponManagementScreen({Key? key}) : super(key: key);
@@ -47,7 +48,9 @@ class CouponManagementScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder(
-        stream: couponCollection.orderBy('created_at', descending: true).snapshots(),
+        stream: couponCollection
+            .orderBy('created_at', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -58,7 +61,8 @@ class CouponManagementScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.card_giftcard_outlined, size: 80, color: Colors.grey[400]),
+                  Icon(Icons.card_giftcard_outlined,
+                      size: 80, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'No coupons found',
@@ -79,6 +83,32 @@ class CouponManagementScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data!.docs;
+
+          // ✅ RESPONSIVE COUPONS GRID
+          if (ResponsiveHelper.isTablet(context) ||
+              ResponsiveHelper.isDesktop(context)) {
+            return GridView.builder(
+              padding: const EdgeInsets.all(20),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing:
+                    16, // Use mainAxisSpacing for vertical gaps in GridView
+                childAspectRatio: 1.1,
+              ),
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                final data = docs[index].data() as Map;
+                final docId = docs[index].id;
+
+                return _CouponCard(
+                  docId: docId,
+                  data: data,
+                  couponCollection: couponCollection,
+                );
+              },
+            );
+          }
 
           return ListView.builder(
             padding: const EdgeInsets.all(20),
@@ -119,15 +149,18 @@ class _CouponCard extends StatelessWidget {
     final titleAr = data['title_ar'] ?? '';
 
     // Display Title logic: Show Title (EN) if exists, else Code.
-    final displayTitle = (titleEn != null && titleEn.isNotEmpty) ? titleEn : code;
+    final displayTitle =
+        (titleEn != null && titleEn.isNotEmpty) ? titleEn : code;
 
     final value = data['value'] ?? 0;
     final type = data['type'] ?? 'fixed';
     final minSubtotal = data['min_subtotal'];
     final isActive = data['active'] ?? false;
 
-    final branchIds = data['branchIds'] is List ? List.from(data['branchIds']) : [];
-    final branchesText = branchIds.isNotEmpty ? branchIds.join(', ') : 'All Branches';
+    final branchIds =
+        data['branchIds'] is List ? List.from(data['branchIds']) : [];
+    final branchesText =
+        branchIds.isNotEmpty ? branchIds.join(', ') : 'All Branches';
 
     final valueLabel = type == "percentage" ? "$value% off" : "QAR $value off";
     final restriction = (minSubtotal != null && minSubtotal > 0)
@@ -157,9 +190,12 @@ class _CouponCard extends StatelessWidget {
               children: [
                 // Status Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                    color: isActive
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -185,7 +221,8 @@ class _CouponCard extends StatelessWidget {
                 const Spacer(),
                 // Coupon Code Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Colors.deepPurple, Colors.deepPurple.shade300],
@@ -213,12 +250,19 @@ class _CouponCard extends StatelessWidget {
             if (titleEn.isNotEmpty || titleAr.isNotEmpty) ...[
               Text(
                 titleEn,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87),
               ),
               if (titleAr.isNotEmpty)
                 Text(
                   titleAr,
-                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14, color: Colors.grey[700], fontFamily: 'NotoSansArabic'),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      fontFamily: 'NotoSansArabic'),
                   textDirection: TextDirection.rtl,
                 ),
               const SizedBox(height: 8),
@@ -305,7 +349,8 @@ class _CouponCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.location_on_outlined, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.location_on_outlined,
+                      size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -341,7 +386,8 @@ class _CouponCard extends StatelessWidget {
                     ),
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text('Edit',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () {
                         showDialog(
                           context: context,
@@ -378,14 +424,16 @@ class _CouponCard extends StatelessWidget {
                     ),
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text('Delete',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () async {
                         final shouldDelete = await _confirmDelete(context);
                         if (shouldDelete) {
                           await couponCollection.doc(docId).delete();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Coupon deleted successfully')),
+                              const SnackBar(
+                                  content: Text('Coupon deleted successfully')),
                             );
                           }
                         }
@@ -426,10 +474,12 @@ class _CouponCard extends StatelessWidget {
               child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
             ),
             const SizedBox(width: 12),
-            const Text('Delete Coupon?', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Delete Coupon?',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('Are you sure you want to delete this coupon? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to delete this coupon? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -439,10 +489,13 @@ class _CouponCard extends StatelessWidget {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -497,7 +550,8 @@ class CouponDialog extends StatefulWidget {
   final String? docId;
   final Map? initialData;
 
-  const CouponDialog({this.docId, this.initialData, Key? key}) : super(key: key);
+  const CouponDialog({this.docId, this.initialData, Key? key})
+      : super(key: key);
 
   @override
   State<CouponDialog> createState() => _CouponDialogState();
@@ -531,8 +585,10 @@ class _CouponDialogState extends State<CouponDialog> {
     _codeCtrl = TextEditingController(text: data['code'] ?? '');
     _typeCtrl = TextEditingController(text: data['type'] ?? 'percentage');
     _valueCtrl = TextEditingController(text: data['value']?.toString() ?? '');
-    _minSubtotalCtrl = TextEditingController(text: data['min_subtotal']?.toString() ?? '');
-    _maxDiscountCtrl = TextEditingController(text: data['max_discount']?.toString() ?? '0');
+    _minSubtotalCtrl =
+        TextEditingController(text: data['min_subtotal']?.toString() ?? '');
+    _maxDiscountCtrl =
+        TextEditingController(text: data['max_discount']?.toString() ?? '0');
     _isActive = data['active'] ?? true;
 
     // Initialize New Arabic/English fields
@@ -557,9 +613,11 @@ class _CouponDialogState extends State<CouponDialog> {
 
   Future<void> _fetchBranches() async {
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('Branch').get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('Branch').get();
       final branches = {
-        for (var doc in snapshot.docs) doc.id: doc.data()['name'] as String? ?? doc.id
+        for (var doc in snapshot.docs)
+          doc.id: doc.data()['name'] as String? ?? doc.id
       };
       if (mounted) {
         setState(() {
@@ -646,8 +704,11 @@ class _CouponDialogState extends State<CouponDialog> {
                       border: Border.all(color: Colors.grey[300]!),
                     ),
                     child: SwitchListTile(
-                      title: const Text('Active Coupon', style: TextStyle(fontWeight: FontWeight.w500)),
-                      subtitle: Text(_isActive ? 'Coupon is currently active' : 'Coupon is inactive'),
+                      title: const Text('Active Coupon',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      subtitle: Text(_isActive
+                          ? 'Coupon is currently active'
+                          : 'Coupon is inactive'),
                       value: _isActive,
                       onChanged: (val) => setState(() => _isActive = val),
                       activeColor: Colors.deepPurple,
@@ -660,12 +721,15 @@ class _CouponDialogState extends State<CouponDialog> {
                   Row(
                     children: [
                       Expanded(
-                        child: _roundedInput(_titleEnCtrl, 'Title (English)', Icons.title,
+                        child: _roundedInput(
+                            _titleEnCtrl, 'Title (English)', Icons.title,
                             validator: (v) => v!.isEmpty ? 'Required' : null),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _roundedInput(_titleArCtrl, 'Title (Arabic)', Icons.translate, textDirection: TextDirection.rtl),
+                        child: _roundedInput(
+                            _titleArCtrl, 'Title (Arabic)', Icons.translate,
+                            textDirection: TextDirection.rtl),
                       ),
                     ],
                   ),
@@ -673,28 +737,36 @@ class _CouponDialogState extends State<CouponDialog> {
                   Row(
                     children: [
                       Expanded(
-                        child: _roundedInput(_descEnCtrl, 'Description (English)', Icons.description),
+                        child: _roundedInput(_descEnCtrl,
+                            'Description (English)', Icons.description),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _roundedInput(_descArCtrl, 'Description (Arabic)', Icons.description, textDirection: TextDirection.rtl),
+                        child: _roundedInput(_descArCtrl,
+                            'Description (Arabic)', Icons.description,
+                            textDirection: TextDirection.rtl),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   _formSectionHeader('Coupon Logic'),
-                  _roundedInput(_codeCtrl, 'Code (Unique)', Icons.card_giftcard_rounded,
-                      validator: (v) => v == null || v.isEmpty ? 'Code required' : null),
+                  _roundedInput(
+                      _codeCtrl, 'Code (Unique)', Icons.card_giftcard_rounded,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Code required' : null),
                   const SizedBox(height: 16),
 
-                  _roundedInput(_typeCtrl, 'Type (percentage/fixed)', Icons.category,
-                      validator: (v) => v == null || v.isEmpty ? 'Type required' : null),
+                  _roundedInput(
+                      _typeCtrl, 'Type (percentage/fixed)', Icons.category,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Type required' : null),
                   const SizedBox(height: 16),
 
                   _roundedInput(_valueCtrl, 'Value', Icons.percent,
                       type: TextInputType.number,
-                      validator: (v) => v == null || v.isEmpty ? 'Value required' : null),
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Value required' : null),
                   const SizedBox(height: 24),
 
                   // Branches
@@ -703,18 +775,22 @@ class _CouponDialogState extends State<CouponDialog> {
                   const SizedBox(height: 24),
 
                   _formSectionHeader('Restrictions'),
-                  _roundedInput(_minSubtotalCtrl, 'Minimum Subtotal', Icons.attach_money,
+                  _roundedInput(
+                      _minSubtotalCtrl, 'Minimum Subtotal', Icons.attach_money,
                       type: TextInputType.number),
                   const SizedBox(height: 16),
 
-                  _roundedInput(_maxDiscountCtrl, 'Maximum Discount', Icons.money_off,
+                  _roundedInput(
+                      _maxDiscountCtrl, 'Maximum Discount', Icons.money_off,
                       type: TextInputType.number),
                   const SizedBox(height: 24),
 
                   _formSectionHeader('Validity Period'),
-                  _dateRow('Valid From', _validFrom, (date) => setState(() => _validFrom = date)),
+                  _dateRow('Valid From', _validFrom,
+                      (date) => setState(() => _validFrom = date)),
                   const SizedBox(height: 12),
-                  _dateRow('Valid Until', _validUntil, (date) => setState(() => _validUntil = date)),
+                  _dateRow('Valid Until', _validUntil,
+                      (date) => setState(() => _validUntil = date)),
                   const SizedBox(height: 32),
 
                   // Action Buttons
@@ -722,32 +798,43 @@ class _CouponDialogState extends State<CouponDialog> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _loading ? null : () => Navigator.pop(context),
+                          onPressed:
+                              _loading ? null : () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.deepPurple, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: const BorderSide(
+                                color: Colors.deepPurple, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           child: const Text('Cancel',
-                              style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  color: Colors.deepPurple,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: _loading ? null : (isEdit ? _editCoupon : _addCoupon),
+                          onPressed: _loading
+                              ? null
+                              : (isEdit ? _editCoupon : _addCoupon),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                           child: _loading
                               ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
                               : Text(isEdit ? 'Update' : 'Add',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white)),
                         ),
                       ),
                     ],
@@ -782,7 +869,10 @@ class _CouponDialogState extends State<CouponDialog> {
         children: [
           Text(
             'Select branches where this coupon will be available:',
-            style: TextStyle(fontSize: 13, color: Colors.grey[700], fontWeight: FontWeight.w500),
+            style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -815,7 +905,8 @@ class _CouponDialogState extends State<CouponDialog> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                   side: BorderSide(
-                    color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
+                    color:
+                        isSelected ? Colors.deepPurple : Colors.grey.shade300,
                     width: isSelected ? 2 : 1,
                   ),
                 ),
@@ -828,32 +919,34 @@ class _CouponDialogState extends State<CouponDialog> {
   }
 
   Widget _formSectionHeader(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 8.0),
-    child: Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: Colors.deepPurple,
-            borderRadius: BorderRadius.circular(2),
-          ),
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              height: 16,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.deepPurple,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Colors.deepPurple,
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 
   Widget _roundedInput(TextEditingController c, String label, IconData icon,
-      {String? Function(String?)? validator, TextInputType? type, TextDirection? textDirection}) {
+      {String? Function(String?)? validator,
+      TextInputType? type,
+      TextDirection? textDirection}) {
     return TextFormField(
       controller: c,
       keyboardType: type,
@@ -900,9 +993,12 @@ class _CouponDialogState extends State<CouponDialog> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded, color: Colors.deepPurple, size: 20),
+            Icon(Icons.calendar_today_rounded,
+                color: Colors.deepPurple, size: 20),
             const SizedBox(width: 12),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
+            Text(label,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
             const Spacer(),
             Text(
               date != null
@@ -915,7 +1011,8 @@ class _CouponDialogState extends State<CouponDialog> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.deepPurple),
+            const Icon(Icons.arrow_forward_ios,
+                size: 14, color: Colors.deepPurple),
           ],
         ),
       ),
@@ -940,7 +1037,10 @@ class _CouponDialogState extends State<CouponDialog> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
     final data = _formData(newCoupon: false);
-    await FirebaseFirestore.instance.collection('coupons').doc(widget.docId).update(data);
+    await FirebaseFirestore.instance
+        .collection('coupons')
+        .doc(widget.docId)
+        .update(data);
     setState(() => _loading = false);
     if (mounted) {
       Navigator.pop(context);

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -11,7 +12,8 @@ class AnalyticsScreen extends StatefulWidget {
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProviderStateMixin {
+class _AnalyticsScreenState extends State<AnalyticsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   DateTimeRange _dateRange = DateTimeRange(
     start: DateTime.now().subtract(const Duration(days: 7)),
@@ -91,19 +93,58 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             _buildAnalyticsOverviewCards(),
             const SizedBox(height: 32),
 
-            buildSectionHeader('Sales Trend', Icons.trending_up),
-            const SizedBox(height: 16),
-            _buildSalesChart(),
-            const SizedBox(height: 32),
-
-            buildSectionHeader('Performance', Icons.star_border),
-            const SizedBox(height: 16),
-            _buildTopItemsList(),
-            const SizedBox(height: 32),
-
-            buildSectionHeader('Distribution', Icons.pie_chart_outline),
-            const SizedBox(height: 16),
-            _buildOrderTypeDistributionChart(),
+            // ✅ RESPONSIVE LAYOUT
+            if (ResponsiveHelper.isDesktop(context))
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildSectionHeader('Sales Trend', Icons.trending_up),
+                        const SizedBox(height: 16),
+                        _buildSalesChart(),
+                        const SizedBox(height: 32),
+                        buildSectionHeader('Performance', Icons.star_border),
+                        const SizedBox(height: 16),
+                        _buildTopItemsList(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        buildSectionHeader(
+                            'Distribution', Icons.pie_chart_outline),
+                        const SizedBox(height: 16),
+                        _buildOrderTypeDistributionChart(),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildSectionHeader('Sales Trend', Icons.trending_up),
+                  const SizedBox(height: 16),
+                  _buildSalesChart(),
+                  const SizedBox(height: 32),
+                  buildSectionHeader('Performance', Icons.star_border),
+                  const SizedBox(height: 16),
+                  _buildTopItemsList(),
+                  const SizedBox(height: 32),
+                  buildSectionHeader('Distribution', Icons.pie_chart_outline),
+                  const SizedBox(height: 16),
+                  _buildOrderTypeDistributionChart(),
+                ],
+              ),
             const SizedBox(height: 20),
           ],
         ),
@@ -281,7 +322,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
         final totalOrders = orders.length;
         final totalRevenue = orders.fold<double>(
           0,
-              (sum, doc) {
+          (sum, doc) {
             final data = doc.data() as Map<String, dynamic>;
             return sum + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
           },
@@ -322,7 +363,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -437,9 +479,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
               }
 
               // Aggregate sales by day
-              final ordersByDay = snapshot.data!.docs.fold<Map<DateTime, double>>(
+              final ordersByDay =
+                  snapshot.data!.docs.fold<Map<DateTime, double>>(
                 {},
-                    (map, doc) {
+                (map, doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final timestamp = data['timestamp'] as Timestamp;
                   final date = timestamp.toDate();
@@ -452,10 +495,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
 
               // Generate all days in the range
               final List<DateTime> allDays = [];
-              DateTime current = DateTime(
-                  _dateRange.start.year, _dateRange.start.month, _dateRange.start.day);
+              DateTime current = DateTime(_dateRange.start.year,
+                  _dateRange.start.month, _dateRange.start.day);
               final end = DateTime(_dateRange.end.year, _dateRange.end.month,
-                  _dateRange.end.day)
+                      _dateRange.end.day)
                   .add(const Duration(days: 1));
 
               while (current.isBefore(end)) {
@@ -483,7 +526,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                     text: 'Sales Amount (QAR)',
                     textStyle: TextStyle(color: Colors.grey[700]),
                   ),
-                  majorGridLines: const MajorGridLines(width: 0.5, color: Colors.grey),
+                  majorGridLines:
+                      const MajorGridLines(width: 0.5, color: Colors.grey),
                   axisLine: const AxisLine(width: 0),
                   labelStyle: TextStyle(color: Colors.grey[700], fontSize: 12),
                 ),
@@ -556,7 +600,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
 
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
-              final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+              final items =
+                  List<Map<String, dynamic>>.from(data['items'] ?? []);
 
               for (var item in items) {
                 final itemName = item['name'] ?? 'Unknown Item';
@@ -567,7 +612,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                     ifAbsent: () => quantity);
                 itemRevenue.update(
                   itemName,
-                      (value) => value + (price * quantity),
+                  (value) => value + (price * quantity),
                   ifAbsent: () => price * quantity,
                 );
               }
@@ -701,9 +746,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
             stream: FirebaseFirestore.instance
                 .collection('Orders')
                 .where('timestamp',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
+                    isGreaterThanOrEqualTo:
+                        Timestamp.fromDate(_dateRange.start))
                 .where('timestamp',
-                isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
+                    isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
                 .orderBy('timestamp', descending: true)
                 .snapshots(),
             builder: (context, snapshot) {
@@ -728,7 +774,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
 
               for (var doc in snapshot.data!.docs) {
                 final data = doc.data() as Map<String, dynamic>;
-                String rawOrderType = (data['Order_type'] as String?) ?? 'unknown';
+                String rawOrderType =
+                    (data['Order_type'] as String?) ?? 'unknown';
                 String cleanedRaw = rawOrderType.trim().toLowerCase();
                 String normalizedKey;
 
@@ -736,7 +783,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                   normalizedKey = 'delivery';
                 } else if (cleanedRaw == 'take_away') {
                   normalizedKey = 'take_away';
-                } else if (cleanedRaw == 'pickup') { // Add check for pickup
+                } else if (cleanedRaw == 'pickup') {
+                  // Add check for pickup
                   normalizedKey = 'pickup';
                 } else if (cleanedRaw == 'dine_in') {
                   normalizedKey = 'dine_in';
@@ -745,7 +793,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                 }
 
                 if (orderTypeCounts.containsKey(normalizedKey)) {
-                  orderTypeCounts[normalizedKey] = orderTypeCounts[normalizedKey]! + 1;
+                  orderTypeCounts[normalizedKey] =
+                      orderTypeCounts[normalizedKey]! + 1;
                   totalOrders++;
                 }
               }
@@ -753,10 +802,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
               final chartData = orderTypeCounts.entries
                   .where((entry) => entry.value > 0)
                   .map((entry) => OrderTypeData(
-                entry.key,
-                entry.value,
-                _getOrderTypeColor(entry.key),
-              ))
+                        entry.key,
+                        entry.value,
+                        _getOrderTypeColor(entry.key),
+                      ))
                   .toList();
 
               if (chartData.isEmpty) {
@@ -780,13 +829,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
                     yValueMapper: (OrderTypeData data, _) => data.count,
                     pointColorMapper: (OrderTypeData data, _) => data.color,
                     dataLabelMapper: (OrderTypeData data, _) {
-                      final percentage = (data.count / totalOrders * 100).toStringAsFixed(1);
+                      final percentage =
+                          (data.count / totalOrders * 100).toStringAsFixed(1);
                       return '${_formatOrderTypeForPieLabel(data.orderType)}\n$percentage%';
                     },
                     dataLabelSettings: const DataLabelSettings(
                       isVisible: true,
                       labelPosition: ChartDataLabelPosition.inside,
-                      textStyle: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold),
+                      textStyle: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold),
                     ),
                     explode: true,
                     explodeIndex: 0,
@@ -834,8 +887,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
   Query<Map<String, dynamic>> _getOrdersQuery() {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('Orders')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
-        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
+        .where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
+        .where('timestamp',
+            isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
         .orderBy('timestamp', descending: true);
 
     if (_selectedOrderType != 'all') {

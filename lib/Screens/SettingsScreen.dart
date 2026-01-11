@@ -172,219 +172,233 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Card
-            _buildProfileCard(userScope, authService),
-            const SizedBox(height: 24),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Card
+                _buildProfileCard(userScope, authService),
+                const SizedBox(height: 24),
 
-            // Restaurant Status
-            _buildRestaurantStatusCard(_restaurantStatus, userScope),
-            const SizedBox(height: 24),
+                // Restaurant Status
+                _buildRestaurantStatusCard(_restaurantStatus, userScope),
+                const SizedBox(height: 24),
 
-            // Administration Section
-            if (userScope.isSuperAdmin ||
-                userScope.can(Permissions.canManageStaff) ||
-                userScope.can(Permissions.canManageCoupons)) ...[
-              _buildSectionTitle('Administration', Icons.admin_panel_settings),
-              const SizedBox(height: 12),
-              _buildGroupedSettingsCard([
-                if (userScope.isSuperAdmin)
+                // Administration Section
+                if (userScope.isSuperAdmin ||
+                    userScope.can(Permissions.canManageStaff) ||
+                    userScope.can(Permissions.canManageCoupons)) ...[
+                  _buildSectionTitle(
+                      'Administration', Icons.admin_panel_settings),
+                  const SizedBox(height: 12),
+                  _buildGroupedSettingsCard([
+                    if (userScope.isSuperAdmin)
+                      _SettingsItem(
+                        icon: Icons.access_time_rounded,
+                        title: 'Restaurant Timings',
+                        subtitle: 'Manage opening hours',
+                        iconColor: Colors.orange,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const RestaurantTimingScreen()),
+                        ),
+                      ),
+                    if (userScope.isSuperAdmin ||
+                        userScope.role == 'branchadmin')
+                      _SettingsItem(
+                        icon: Icons.history_edu_rounded,
+                        title: 'Order History',
+                        subtitle: 'View past orders',
+                        iconColor: Colors.blue,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) => const OrderHistoryScreen()),
+                        ),
+                      ),
+                    if (userScope.isSuperAdmin &&
+                        userScope.can(Permissions.canManageStaff))
+                      _SettingsItem(
+                        icon: Icons.people_alt,
+                        title: 'Staff Management',
+                        subtitle: 'Manage team members',
+                        iconColor: Colors.deepPurple,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const StaffManagementScreen()),
+                        ),
+                      ),
+                    if (userScope.can(Permissions.canManageCoupons))
+                      _SettingsItem(
+                        icon: Icons.card_giftcard_rounded,
+                        title: 'Coupon Management',
+                        subtitle: 'Create discount codes',
+                        iconColor: Colors.teal,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const CouponManagementScreen()),
+                        ),
+                      ),
+                    if (userScope.isSuperAdmin)
+                      _SettingsItem(
+                        icon: Icons.business_outlined,
+                        title: 'Branch Settings',
+                        subtitle: 'Manage branches',
+                        iconColor: Colors.indigo,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const BranchManagementScreen()),
+                        ),
+                      ),
+                    if (userScope.isSuperAdmin ||
+                        userScope.role == 'branch_admin')
+                      _SettingsItem(
+                        icon: Icons.table_restaurant_rounded,
+                        title: 'Table Management',
+                        subtitle: 'Manage restaurant tables',
+                        iconColor: Colors.teal,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const TableManagementScreen()),
+                        ),
+                      ),
+                    if (userScope.isSuperAdmin)
+                      _SettingsItem(
+                        icon: Icons.analytics_outlined,
+                        title: 'Business Analytics',
+                        subtitle: 'View reports & insights',
+                        iconColor: Colors.green,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) => const AnalyticsScreen()),
+                        ),
+                      ),
+                  ]),
+                  const SizedBox(height: 24),
+                ],
+
+                // App Preferences Section
+                _buildSectionTitle('App Preferences', Icons.tune_rounded),
+                const SizedBox(height: 12),
+                _buildGroupedSettingsCard([
                   _SettingsItem(
-                    icon: Icons.access_time_rounded,
-                    title: 'Restaurant Timings',
-                    subtitle: 'Manage opening hours',
-                    iconColor: Colors.orange,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const RestaurantTimingScreen()),
+                    icon: Icons.notifications_outlined,
+                    title: 'Notifications',
+                    subtitle: 'Push alerts & sounds',
+                    iconColor: Colors.red,
+                    onTap: () => _showNotificationSettings(context),
+                  ),
+                  _SettingsItem(
+                    icon: Icons.dark_mode_outlined,
+                    title: 'Dark Mode',
+                    subtitle: _darkModeEnabled ? 'Enabled' : 'Disabled',
+                    iconColor: Colors.blueGrey,
+                    trailing: Switch.adaptive(
+                      value: _darkModeEnabled,
+                      activeColor: Colors.deepPurple,
+                      onChanged: (val) {
+                        setState(() => _darkModeEnabled = val);
+                        _savePreference('dark_mode_enabled', val);
+                        _showSnackBar(context,
+                            'Dark mode ${val ? 'enabled' : 'disabled'}');
+                      },
                     ),
                   ),
-                if (userScope.isSuperAdmin || userScope.role == 'branchadmin')
                   _SettingsItem(
-                    icon: Icons.history_edu_rounded,
-                    title: 'Order History',
-                    subtitle: 'View past orders',
+                    icon: Icons.language_outlined,
+                    title: 'Language',
+                    subtitle: _selectedLanguage,
+                    iconColor: Colors.purple,
+                    onTap: () => _showLanguageDialog(context),
+                  ),
+                  _SettingsItem(
+                    icon: Icons.palette_outlined,
+                    title: 'Theme Color',
+                    subtitle: 'Customize appearance',
+                    iconColor: Colors.pink,
+                    onTap: () => _showThemeColorDialog(context),
+                  ),
+                ]),
+                const SizedBox(height: 24),
+
+                // Support Section
+                _buildSectionTitle(
+                    'Support & Help', Icons.support_agent_rounded),
+                const SizedBox(height: 12),
+                _buildGroupedSettingsCard([
+                  _SettingsItem(
+                    icon: Icons.help_center_outlined,
+                    title: 'Help Center',
+                    subtitle: 'FAQs & guides',
                     iconColor: Colors.blue,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const OrderHistoryScreen()),
-                    ),
+                    onTap: () => _contactSupport(context),
                   ),
-                if (userScope.isSuperAdmin &&
-                    userScope.can(Permissions.canManageStaff))
                   _SettingsItem(
-                    icon: Icons.people_alt,
-                    title: 'Staff Management',
-                    subtitle: 'Manage team members',
-                    iconColor: Colors.deepPurple,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const StaffManagementScreen()),
-                    ),
+                    icon: Icons.bug_report_outlined,
+                    title: 'Report Bug',
+                    subtitle: 'Found an issue?',
+                    iconColor: Colors.red,
+                    onTap: () => _reportBug(context),
                   ),
-                if (userScope.can(Permissions.canManageCoupons))
                   _SettingsItem(
-                    icon: Icons.card_giftcard_rounded,
-                    title: 'Coupon Management',
-                    subtitle: 'Create discount codes',
+                    icon: Icons.feedback_outlined,
+                    title: 'Send Feedback',
+                    subtitle: 'Share suggestions',
+                    iconColor: Colors.amber,
+                    onTap: () => _sendFeedback(context),
+                  ),
+                ]),
+                const SizedBox(height: 24),
+
+                // Legal & Info Section
+                _buildSectionTitle('Legal & Info', Icons.info_outline_rounded),
+                const SizedBox(height: 12),
+                _buildGroupedSettingsCard([
+                  _SettingsItem(
+                    icon: Icons.privacy_tip_outlined,
+                    title: 'Privacy Policy',
+                    subtitle: 'How we use your data',
                     iconColor: Colors.teal,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const CouponManagementScreen()),
-                    ),
+                    onTap: () => _viewPrivacyPolicy(context),
                   ),
-                if (userScope.isSuperAdmin)
                   _SettingsItem(
-                    icon: Icons.business_outlined,
-                    title: 'Branch Settings',
-                    subtitle: 'Manage branches',
-                    iconColor: Colors.indigo,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const BranchManagementScreen()),
-                    ),
+                    icon: Icons.description_outlined,
+                    title: 'Terms of Service',
+                    subtitle: 'User agreement',
+                    iconColor: Colors.brown,
+                    onTap: () => _viewTermsOfService(context),
                   ),
-                if (userScope.isSuperAdmin || userScope.role == 'branch_admin')
                   _SettingsItem(
-                    icon: Icons.table_restaurant_rounded,
-                    title: 'Table Management',
-                    subtitle: 'Manage restaurant tables',
-                    iconColor: Colors.teal,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const TableManagementScreen()),
-                    ),
-                  ),
-                if (userScope.isSuperAdmin)
-                  _SettingsItem(
-                    icon: Icons.analytics_outlined,
-                    title: 'Business Analytics',
-                    subtitle: 'View reports & insights',
+                    icon: Icons.system_update_outlined,
+                    title: 'Check for Updates',
+                    subtitle: 'v1.2.0 (Build 45)',
                     iconColor: Colors.green,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const AnalyticsScreen()),
-                    ),
+                    onTap: () => _checkForUpdates(context),
                   ),
-              ]),
-              const SizedBox(height: 24),
-            ],
+                  _SettingsItem(
+                    icon: Icons.info_outline,
+                    title: 'About App',
+                    subtitle: 'App information',
+                    iconColor: Colors.grey,
+                    onTap: () => _showAppInfo(context),
+                  ),
+                ]),
+                const SizedBox(height: 32),
 
-            // App Preferences Section
-            _buildSectionTitle('App Preferences', Icons.tune_rounded),
-            const SizedBox(height: 12),
-            _buildGroupedSettingsCard([
-              _SettingsItem(
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: 'Push alerts & sounds',
-                iconColor: Colors.red,
-                onTap: () => _showNotificationSettings(context),
-              ),
-              _SettingsItem(
-                icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                subtitle: _darkModeEnabled ? 'Enabled' : 'Disabled',
-                iconColor: Colors.blueGrey,
-                trailing: Switch.adaptive(
-                  value: _darkModeEnabled,
-                  activeColor: Colors.deepPurple,
-                  onChanged: (val) {
-                    setState(() => _darkModeEnabled = val);
-                    _savePreference('dark_mode_enabled', val);
-                    _showSnackBar(
-                        context, 'Dark mode ${val ? 'enabled' : 'disabled'}');
-                  },
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.language_outlined,
-                title: 'Language',
-                subtitle: _selectedLanguage,
-                iconColor: Colors.purple,
-                onTap: () => _showLanguageDialog(context),
-              ),
-              _SettingsItem(
-                icon: Icons.palette_outlined,
-                title: 'Theme Color',
-                subtitle: 'Customize appearance',
-                iconColor: Colors.pink,
-                onTap: () => _showThemeColorDialog(context),
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            // Support Section
-            _buildSectionTitle('Support & Help', Icons.support_agent_rounded),
-            const SizedBox(height: 12),
-            _buildGroupedSettingsCard([
-              _SettingsItem(
-                icon: Icons.help_center_outlined,
-                title: 'Help Center',
-                subtitle: 'FAQs & guides',
-                iconColor: Colors.blue,
-                onTap: () => _contactSupport(context),
-              ),
-              _SettingsItem(
-                icon: Icons.bug_report_outlined,
-                title: 'Report Bug',
-                subtitle: 'Found an issue?',
-                iconColor: Colors.red,
-                onTap: () => _reportBug(context),
-              ),
-              _SettingsItem(
-                icon: Icons.feedback_outlined,
-                title: 'Send Feedback',
-                subtitle: 'Share suggestions',
-                iconColor: Colors.amber,
-                onTap: () => _sendFeedback(context),
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            // Legal & Info Section
-            _buildSectionTitle('Legal & Info', Icons.info_outline_rounded),
-            const SizedBox(height: 12),
-            _buildGroupedSettingsCard([
-              _SettingsItem(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                subtitle: 'How we use your data',
-                iconColor: Colors.teal,
-                onTap: () => _viewPrivacyPolicy(context),
-              ),
-              _SettingsItem(
-                icon: Icons.description_outlined,
-                title: 'Terms of Service',
-                subtitle: 'User agreement',
-                iconColor: Colors.brown,
-                onTap: () => _viewTermsOfService(context),
-              ),
-              _SettingsItem(
-                icon: Icons.system_update_outlined,
-                title: 'Check for Updates',
-                subtitle: 'v1.2.0 (Build 45)',
-                iconColor: Colors.green,
-                onTap: () => _checkForUpdates(context),
-              ),
-              _SettingsItem(
-                icon: Icons.info_outline,
-                title: 'About App',
-                subtitle: 'App information',
-                iconColor: Colors.grey,
-                onTap: () => _showAppInfo(context),
-              ),
-            ]),
-            const SizedBox(height: 32),
-
-            // Logout Button
-            _buildLogoutButton(authService),
-            const SizedBox(height: 40),
-          ],
+                // Logout Button
+                _buildLogoutButton(authService),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../Widgets/RiderAssignment.dart';
 import '../Widgets/BranchFilterService.dart'; // ✅ Added for filtering
 import '../Widgets/CancellationDialog.dart'; // ✅ Added for CancellationReasonDialog
+import '../utils/responsive_helper.dart'; // ✅ Responsive Helper
 import '../main.dart'; // Assuming UserScopeService is here
 import '../constants.dart'; // For OrderNumberHelper
 
@@ -232,167 +233,182 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
             debugPrint("Error sorting documents: $e");
           }
 
+          // ✅ RESPONSIVE UPDATE
+          if (ResponsiveHelper.isTablet(context) ||
+              ResponsiveHelper.isDesktop(context)) {
+            return GridView.builder(
+              padding: const EdgeInsets.all(20),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.1, // Adjust as needed
+              ),
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                return _buildOrderCard(context, docs[index], userScope);
+              },
+            );
+          }
+
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             itemCount: docs.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              final orderDoc = docs[index];
-              final data = orderDoc.data();
-              final orderNumber = OrderNumberHelper.getDisplayNumber(data,
-                  orderId: orderDoc.id);
-              final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-              final reason = data['assignmentNotes'] ?? 'No reason provided';
-              final customerName = data['customerName'] ?? 'N/A';
-              final totalAmount =
-                  (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
-
-              return Card(
-                elevation: 2,
-                shadowColor: Colors.deepPurple.withOpacity(0.05),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Order #$orderNumber',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                              color: Colors.deepPurple,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: Colors.orange.withOpacity(0.5)),
-                            ),
-                            child: const Text(
-                              'NEEDS ASSIGN',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        timestamp != null
-                            ? DateFormat('MMM dd, yyyy hh:mm a')
-                                .format(timestamp)
-                            : 'No date',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                      const Divider(height: 24),
-                      _buildDetailRow(
-                          Icons.person_outline, 'Customer:', customerName,
-                          valueColor: Colors.black87),
-                      _buildDetailRow(Icons.account_balance_wallet_outlined,
-                          'Total:', 'QAR ${totalAmount.toStringAsFixed(2)}',
-                          valueColor: Colors.green.shade700),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                          border:
-                              Border.all(color: Colors.red.withOpacity(0.1)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'REASON FOR MANUAL ASSIGNMENT:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                color: Colors.red,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              reason,
-                              style: const TextStyle(
-                                  fontSize: 13, color: Colors.black87),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              icon: const Icon(Icons.cancel_outlined, size: 18),
-                              label: const Text('Cancel Order'),
-                              onPressed: () =>
-                                  _promptCancelOrder(context, orderDoc.id),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: const BorderSide(color: Colors.red),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.delivery_dining, size: 18),
-                              label: const Text('Assign Rider'),
-                              onPressed: () {
-                                // Fix: Use order's branch ID, not user's current branch
-                                final orderBranchId =
-                                    data['branchId']?.toString() ??
-                                        (data['branchIds'] is List &&
-                                                (data['branchIds'] as List)
-                                                    .isNotEmpty
-                                            ? data['branchIds'][0].toString()
-                                            : null);
-
-                                _promptAssignRider(
-                                  context,
-                                  orderDoc.id,
-                                  orderBranchId ?? userScope.branchId ?? '',
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return _buildOrderCard(context, docs[index], userScope);
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(
+      BuildContext context,
+      QueryDocumentSnapshot<Map<String, dynamic>> orderDoc,
+      UserScopeService userScope) {
+    final data = orderDoc.data();
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
+    final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+    final reason = data['assignmentNotes'] ?? 'No reason provided';
+    final customerName = data['customerName'] ?? 'N/A';
+    final totalAmount = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.deepPurple.withOpacity(0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Order #$orderNumber',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                  ),
+                  child: const Text(
+                    'NEEDS ASSIGN',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              timestamp != null
+                  ? DateFormat('MMM dd, yyyy hh:mm a').format(timestamp)
+                  : 'No date',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            const Divider(height: 24),
+            _buildDetailRow(Icons.person_outline, 'Customer:', customerName,
+                valueColor: Colors.black87),
+            _buildDetailRow(Icons.account_balance_wallet_outlined, 'Total:',
+                'QAR ${totalAmount.toStringAsFixed(2)}',
+                valueColor: Colors.green.shade700),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withOpacity(0.1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'REASON FOR MANUAL ASSIGNMENT:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    reason,
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.cancel_outlined, size: 18),
+                    label: const Text('Cancel Order'),
+                    onPressed: () => _promptCancelOrder(context, orderDoc.id),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.delivery_dining, size: 18),
+                    label: const Text('Assign Rider'),
+                    onPressed: () {
+                      // Fix: Use order's branch ID, not user's current branch
+                      String? orderBranchId;
+                      if (data['branchId'] != null) {
+                        orderBranchId = data['branchId'].toString();
+                      } else if (data['branchIds'] is List &&
+                          (data['branchIds'] as List).isNotEmpty) {
+                        orderBranchId = data['branchIds'][0].toString();
+                      }
+
+                      _promptAssignRider(
+                        context,
+                        orderDoc.id,
+                        orderBranchId ?? userScope.branchId ?? '',
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

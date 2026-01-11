@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../main.dart'; // UserScopeService
 import '../Widgets/BranchFilterService.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class TableManagementScreen extends StatefulWidget {
   const TableManagementScreen({super.key});
@@ -82,13 +83,15 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
     );
   }
 
-  Widget _buildBranchList(BuildContext context, UserScopeService userScope, BranchFilterService branchFilter) {
+  Widget _buildBranchList(BuildContext context, UserScopeService userScope,
+      BranchFilterService branchFilter) {
     // Determine which branches to show based on role
     Stream<QuerySnapshot> branchStream;
-    
+
     if (userScope.isSuperAdmin) {
       // SuperAdmins see ALL branches
-      branchStream = FirebaseFirestore.instance.collection('Branch').snapshots();
+      branchStream =
+          FirebaseFirestore.instance.collection('Branch').snapshots();
     } else {
       // Branch admins see only their assigned branches
       final userBranchIds = userScope.branchIds;
@@ -116,11 +119,12 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
           ),
         );
       }
-      
+
       // Query only the branches assigned to this user
       branchStream = FirebaseFirestore.instance
           .collection('Branch')
-          .where(FieldPath.documentId, whereIn: userBranchIds.take(10).toList()) // Firestore limit is 10
+          .where(FieldPath.documentId,
+              whereIn: userBranchIds.take(10).toList()) // Firestore limit is 10
           .snapshots();
     }
 
@@ -167,7 +171,8 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+                Icon(Icons.business_outlined,
+                    size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No branches found.',
@@ -188,23 +193,26 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
         }
 
         final allBranches = snapshot.data!.docs;
-        
+
         // Apply client-side search filtering
         final branches = _searchQuery.isEmpty
             ? allBranches
             : allBranches.where((doc) {
                 final branchData = doc.data() as Map<String, dynamic>;
-                final name = (branchData['name'] ?? '').toString().toLowerCase();
+                final name =
+                    (branchData['name'] ?? '').toString().toLowerCase();
                 final branchId = doc.id.toLowerCase();
-                return name.contains(_searchQuery) || branchId.contains(_searchQuery);
+                return name.contains(_searchQuery) ||
+                    branchId.contains(_searchQuery);
               }).toList();
-        
+
         if (branches.isEmpty && _searchQuery.isNotEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_off_rounded, size: 64, color: Colors.grey[400]),
+                Icon(Icons.search_off_rounded,
+                    size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No branches match "$_searchQuery"',
@@ -223,7 +231,35 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
             ),
           );
         }
-        
+
+        // ✅ RESPONSIVE BRANCH GRID
+        if (ResponsiveHelper.isTablet(context) ||
+            ResponsiveHelper.isDesktop(context)) {
+          return GridView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.5,
+            ),
+            itemCount: branches.length,
+            itemBuilder: (context, index) {
+              final branchDoc = branches[index];
+              final branchData = branchDoc.data() as Map<String, dynamic>;
+              final name = branchData['name'] ?? 'Unnamed Branch';
+              final Map<String, dynamic> tables = Map<String, dynamic>.from(
+                  branchData['Tables'] as Map<String, dynamic>? ?? {});
+
+              return _BranchTableCard(
+                branchId: branchDoc.id,
+                branchName: name,
+                tables: tables,
+              );
+            },
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           itemCount: branches.length,
@@ -231,8 +267,8 @@ class _TableManagementScreenState extends State<TableManagementScreen> {
             final branchDoc = branches[index];
             final branchData = branchDoc.data() as Map<String, dynamic>;
             final name = branchData['name'] ?? 'Unnamed Branch';
-            final Map<String, dynamic> tables =
-                Map<String, dynamic>.from(branchData['Tables'] as Map<String, dynamic>? ?? {});
+            final Map<String, dynamic> tables = Map<String, dynamic>.from(
+                branchData['Tables'] as Map<String, dynamic>? ?? {});
 
             return _BranchTableCard(
               branchId: branchDoc.id,
@@ -276,7 +312,8 @@ class _BranchTableCard extends StatelessWidget {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          childrenPadding:
+              const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           title: Row(
             children: [
               Container(
@@ -307,7 +344,8 @@ class _BranchTableCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.table_restaurant_rounded, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.table_restaurant_rounded,
+                            size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
                           '${tables.length} tables',
@@ -332,7 +370,8 @@ class _BranchTableCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+              icon:
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 20),
               onPressed: () => _showAddTableDialog(context, branchId, tables),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -345,7 +384,8 @@ class _BranchTableCard extends StatelessWidget {
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        Icon(Icons.table_restaurant_outlined, size: 48, color: Colors.grey[400]),
+                        Icon(Icons.table_restaurant_outlined,
+                            size: 48, color: Colors.grey[400]),
                         const SizedBox(height: 12),
                         Text(
                           'No tables in this branch',
@@ -358,29 +398,66 @@ class _BranchTableCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           'Tap the + button to add your first table',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                          style:
+                              TextStyle(color: Colors.grey[500], fontSize: 14),
                         ),
                       ],
                     ),
                   ),
                 ]
-              : tables.entries.map((entry) {
-                  final tableId = entry.key;
-                  final Map<String, dynamic> tableData =
-                      Map<String, dynamic>.from(entry.value as Map<String, dynamic>);
-                  return _TableListItem(
-                    branchId: branchId,
-                    tableId: tableId,
-                    tableData: tableData,
-                    allTables: tables,
-                  );
-                }).toList(),
+              : [
+                  // ✅ RESPONSIVE TABLE GRID OR LIST
+                  if (ResponsiveHelper.isTablet(context) ||
+                      ResponsiveHelper.isDesktop(context))
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount:
+                              ResponsiveHelper.isDesktop(context) ? 4 : 3,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 2.0,
+                        ),
+                        itemCount: tables.length,
+                        itemBuilder: (context, index) {
+                          final entry = tables.entries.elementAt(index);
+                          final tableId = entry.key;
+                          final Map<String, dynamic> tableData =
+                              Map<String, dynamic>.from(
+                                  entry.value as Map<String, dynamic>);
+                          return _TableListItem(
+                            branchId: branchId,
+                            tableId: tableId,
+                            tableData: tableData,
+                            allTables: tables,
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    ...tables.entries.map((entry) {
+                      final tableId = entry.key;
+                      final Map<String, dynamic> tableData =
+                          Map<String, dynamic>.from(
+                              entry.value as Map<String, dynamic>);
+                      return _TableListItem(
+                        branchId: branchId,
+                        tableId: tableId,
+                        tableData: tableData,
+                        allTables: tables,
+                      );
+                    }).toList(),
+                ],
         ),
       ),
     );
   }
 
-  void _showAddTableDialog(BuildContext context, String branchId, Map<String, dynamic> currentTables) {
+  void _showAddTableDialog(BuildContext context, String branchId,
+      Map<String, dynamic> currentTables) {
     _showTableDialog(
       context,
       branchId: branchId,
@@ -433,7 +510,8 @@ class _BranchTableCard extends StatelessWidget {
       builder: (_) => StatefulBuilder(
         builder: (context, setState) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
               width: MediaQuery.of(context).size.width * 0.9,
               padding: const EdgeInsets.all(24),
@@ -489,16 +567,21 @@ class _BranchTableCard extends StatelessWidget {
                           decoration: InputDecoration(
                             labelText: 'Table ID',
                             hintText: 'Enter table identifier',
-                            prefixIcon: Icon(Icons.tag_rounded, color: Colors.deepPurple.shade400),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: Icon(Icons.tag_rounded,
+                                color: Colors.deepPurple.shade400),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+                              borderSide: const BorderSide(
+                                  color: Colors.deepPurple, width: 2),
                             ),
                             filled: true,
                             fillColor: isEdit ? Colors.grey[100] : Colors.white,
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Table ID is required' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Table ID is required'
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -508,20 +591,25 @@ class _BranchTableCard extends StatelessWidget {
                           decoration: InputDecoration(
                             labelText: 'Number of Seats',
                             hintText: 'Enter seat capacity',
-                            prefixIcon: Icon(Icons.chair_rounded, color: Colors.deepPurple.shade400),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: Icon(Icons.chair_rounded,
+                                color: Colors.deepPurple.shade400),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+                              borderSide: const BorderSide(
+                                  color: Colors.deepPurple, width: 2),
                             ),
                             filled: true,
                             fillColor: Colors.white,
                           ),
                           keyboardType: TextInputType.number,
                           validator: (v) {
-                            if (v == null || v.trim().isEmpty) return 'Number of seats is required';
+                            if (v == null || v.trim().isEmpty)
+                              return 'Number of seats is required';
                             final seats = int.tryParse(v);
-                            if (seats == null || seats <= 0) return 'Please enter a valid number greater than 0';
+                            if (seats == null || seats <= 0)
+                              return 'Please enter a valid number greater than 0';
                             return null;
                           },
                         ),
@@ -546,12 +634,16 @@ class _BranchTableCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: DropdownButtonFormField<String>(
-                                value: kStatusValues.contains(status) ? status : 'available',
+                                value: kStatusValues.contains(status)
+                                    ? status
+                                    : 'available',
                                 isExpanded: true,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  prefixIcon: Icon(Icons.info_outline_rounded, color: Colors.deepPurple.shade400),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  prefixIcon: Icon(Icons.info_outline_rounded,
+                                      color: Colors.deepPurple.shade400),
                                 ),
                                 items: kStatusValues
                                     .map(
@@ -578,7 +670,8 @@ class _BranchTableCard extends StatelessWidget {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (val) => setState(() => status = normalizeStatus(val)),
+                                onChanged: (val) => setState(
+                                    () => status = normalizeStatus(val)),
                               ),
                             ),
                           ],
@@ -596,7 +689,8 @@ class _BranchTableCard extends StatelessWidget {
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             side: BorderSide(color: Colors.grey[400]!),
                           ),
                           child: Text(
@@ -618,15 +712,20 @@ class _BranchTableCard extends StatelessWidget {
                             final tableId = idCtrl.text.trim();
                             final seats = int.parse(seatsCtrl.text.trim());
 
-                            final branchRef = FirebaseFirestore.instance.collection('Branch').doc(branchId);
+                            final branchRef = FirebaseFirestore.instance
+                                .collection('Branch')
+                                .doc(branchId);
                             final snap = await branchRef.get();
                             final Map<String, dynamic> allTables =
-                                Map<String, dynamic>.from(snap.data()?['Tables'] as Map<String, dynamic>? ?? {});
+                                Map<String, dynamic>.from(snap.data()?['Tables']
+                                        as Map<String, dynamic>? ??
+                                    {});
 
                             if (!isEdit && allTables.containsKey(tableId)) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Table ID already exists in this branch'),
+                                  content: Text(
+                                      'Table ID already exists in this branch'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -643,7 +742,9 @@ class _BranchTableCard extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  isEdit ? 'Table updated successfully' : 'Table "$tableId" added successfully',
+                                  isEdit
+                                      ? 'Table updated successfully'
+                                      : 'Table "$tableId" added successfully',
                                 ),
                                 backgroundColor: Colors.green,
                               ),
@@ -652,7 +753,8 @@ class _BranchTableCard extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Text(
                             isEdit ? 'Update Table' : 'Add Table',
@@ -792,7 +894,8 @@ class _TableListItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.edit_rounded, color: Colors.blue, size: 18),
+                    icon: const Icon(Icons.edit_rounded,
+                        color: Colors.blue, size: 18),
                     onPressed: () => _showEditTableDialog(context),
                     tooltip: 'Edit Table',
                     padding: const EdgeInsets.all(6),
@@ -806,7 +909,8 @@ class _TableListItem extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+                    icon: const Icon(Icons.delete_rounded,
+                        color: Colors.red, size: 18),
                     onPressed: () => _confirmDelete(context),
                     tooltip: 'Delete Table',
                     padding: const EdgeInsets.all(6),
@@ -839,24 +943,33 @@ class _TableListItem extends StatelessWidget {
           children: [
             const Icon(Icons.warning_rounded, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            const Text('Confirm Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Confirm Delete',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        content: const Text('Are you sure you want to delete this table? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to delete this table? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+            style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
+            child: Text('Cancel',
+                style: TextStyle(
+                    color: Colors.grey[600], fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -865,10 +978,15 @@ class _TableListItem extends StatelessWidget {
     if (confirm == true) {
       final updatedTables = Map<String, dynamic>.from(allTables);
       updatedTables.remove(tableId);
-      await FirebaseFirestore.instance.collection('Branch').doc(branchId).update({'Tables': updatedTables});
+      await FirebaseFirestore.instance
+          .collection('Branch')
+          .doc(branchId)
+          .update({'Tables': updatedTables});
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Table deleted successfully'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Table deleted successfully'),
+              backgroundColor: Colors.green),
         );
       }
     }
@@ -918,7 +1036,8 @@ class _TableListItem extends StatelessWidget {
       builder: (_) => StatefulBuilder(
         builder: (context, setState) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
               width: MediaQuery.of(context).size.width * 0.9,
               padding: const EdgeInsets.all(24),
@@ -974,16 +1093,21 @@ class _TableListItem extends StatelessWidget {
                           decoration: InputDecoration(
                             labelText: 'Table ID',
                             hintText: 'Enter table identifier',
-                            prefixIcon: Icon(Icons.tag_rounded, color: Colors.deepPurple.shade400),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: Icon(Icons.tag_rounded,
+                                color: Colors.deepPurple.shade400),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+                              borderSide: const BorderSide(
+                                  color: Colors.deepPurple, width: 2),
                             ),
                             filled: true,
                             fillColor: isEdit ? Colors.grey[100] : Colors.white,
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Table ID is required' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Table ID is required'
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
@@ -993,20 +1117,25 @@ class _TableListItem extends StatelessWidget {
                           decoration: InputDecoration(
                             labelText: 'Number of Seats',
                             hintText: 'Enter seat capacity',
-                            prefixIcon: Icon(Icons.chair_rounded, color: Colors.deepPurple.shade400),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            prefixIcon: Icon(Icons.chair_rounded,
+                                color: Colors.deepPurple.shade400),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+                              borderSide: const BorderSide(
+                                  color: Colors.deepPurple, width: 2),
                             ),
                             filled: true,
                             fillColor: Colors.white,
                           ),
                           keyboardType: TextInputType.number,
                           validator: (v) {
-                            if (v == null || v.trim().isEmpty) return 'Number of seats is required';
+                            if (v == null || v.trim().isEmpty)
+                              return 'Number of seats is required';
                             final seats = int.tryParse(v);
-                            if (seats == null || seats <= 0) return 'Please enter a valid number greater than 0';
+                            if (seats == null || seats <= 0)
+                              return 'Please enter a valid number greater than 0';
                             return null;
                           },
                         ),
@@ -1031,12 +1160,16 @@ class _TableListItem extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: DropdownButtonFormField<String>(
-                                value: kStatusValues.contains(status) ? status : 'available',
+                                value: kStatusValues.contains(status)
+                                    ? status
+                                    : 'available',
                                 isExpanded: true,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  prefixIcon: Icon(Icons.info_outline_rounded, color: Colors.deepPurple.shade400),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  prefixIcon: Icon(Icons.info_outline_rounded,
+                                      color: Colors.deepPurple.shade400),
                                 ),
                                 items: kStatusValues
                                     .map(
@@ -1063,7 +1196,8 @@ class _TableListItem extends StatelessWidget {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (val) => setState(() => status = normalizeStatus(val)),
+                                onChanged: (val) => setState(
+                                    () => status = normalizeStatus(val)),
                               ),
                             ),
                           ],
@@ -1081,7 +1215,8 @@ class _TableListItem extends StatelessWidget {
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             side: BorderSide(color: Colors.grey[400]!),
                           ),
                           child: Text(
@@ -1103,15 +1238,20 @@ class _TableListItem extends StatelessWidget {
                             final tId = idCtrl.text.trim();
                             final seats = int.parse(seatsCtrl.text.trim());
 
-                            final branchRef = FirebaseFirestore.instance.collection('Branch').doc(branchId);
+                            final branchRef = FirebaseFirestore.instance
+                                .collection('Branch')
+                                .doc(branchId);
                             final snap = await branchRef.get();
                             final Map<String, dynamic> tables =
-                                Map<String, dynamic>.from(snap.data()?['Tables'] as Map<String, dynamic>? ?? {});
+                                Map<String, dynamic>.from(snap.data()?['Tables']
+                                        as Map<String, dynamic>? ??
+                                    {});
 
                             if (!isEdit && tables.containsKey(tId)) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Table ID already exists in this branch'),
+                                  content: Text(
+                                      'Table ID already exists in this branch'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -1128,7 +1268,9 @@ class _TableListItem extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  isEdit ? 'Table updated successfully' : 'Table "$tId" added successfully',
+                                  isEdit
+                                      ? 'Table updated successfully'
+                                      : 'Table "$tId" added successfully',
                                 ),
                                 backgroundColor: Colors.green,
                               ),
@@ -1137,7 +1279,8 @@ class _TableListItem extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Text(
                             isEdit ? 'Update Table' : 'Add Table',

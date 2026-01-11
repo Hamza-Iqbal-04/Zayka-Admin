@@ -15,6 +15,7 @@ import '../Widgets/TimeUtils.dart';
 import '../Widgets/BranchFilterService.dart'; // ✅ Branch filter
 import '../Widgets/OrderUIComponents.dart'; // ✅ Shared UI components
 import '../Widgets/CancellationDialog.dart'; // ✅ Shared cancellation dialog
+import '../utils/responsive_helper.dart'; // ✅ Responsive utility
 
 class DashboardScreen extends StatefulWidget {
   final Function(int) onTabChange;
@@ -38,7 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _initBranchFilter() {
     final userScope = context.read<UserScopeService>();
     final branchFilter = context.read<BranchFilterService>();
-    
+
     // Only load if user has multiple branches
     if (userScope.branchIds.length > 1 && !branchFilter.isLoaded) {
       branchFilter.loadBranchNames(userScope.branchIds);
@@ -77,8 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           // Branch selector - only shown for multi-branch users
-          if (showBranchSelector)
-            _buildBranchSelector(userScope, branchFilter),
+          if (showBranchSelector) _buildBranchSelector(userScope, branchFilter),
         ],
       ),
       body: SingleChildScrollView(
@@ -98,7 +98,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildBranchSelector(UserScopeService userScope, BranchFilterService branchFilter) {
+  Widget _buildBranchSelector(
+      UserScopeService userScope, BranchFilterService branchFilter) {
     return Container(
       margin: const EdgeInsets.only(right: 12),
       child: PopupMenuButton<String>(
@@ -121,7 +122,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text(
                   branchFilter.selectedBranchId == null
                       ? 'All Branches'
-                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
                   style: const TextStyle(
                     color: Colors.deepPurple,
                     fontWeight: FontWeight.w600,
@@ -142,12 +144,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               children: [
                 Icon(
-                  branchFilter.selectedBranchId == null 
-                      ? Icons.check_circle 
+                  branchFilter.selectedBranchId == null
+                      ? Icons.check_circle
                       : Icons.circle_outlined,
                   size: 18,
-                  color: branchFilter.selectedBranchId == null 
-                      ? Colors.deepPurple 
+                  color: branchFilter.selectedBranchId == null
+                      ? Colors.deepPurple
                       : Colors.grey,
                 ),
                 const SizedBox(width: 10),
@@ -158,28 +160,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const PopupMenuDivider(),
           // Individual branch options
           ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
-            value: branchId,
-            child: Row(
-              children: [
-                Icon(
-                  branchFilter.selectedBranchId == branchId 
-                      ? Icons.check_circle 
-                      : Icons.circle_outlined,
-                  size: 18,
-                  color: branchFilter.selectedBranchId == branchId 
-                      ? Colors.deepPurple 
-                      : Colors.grey,
+                value: branchId,
+                child: Row(
+                  children: [
+                    Icon(
+                      branchFilter.selectedBranchId == branchId
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 18,
+                      color: branchFilter.selectedBranchId == branchId
+                          ? Colors.deepPurple
+                          : Colors.grey,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        branchFilter.getBranchName(branchId),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    branchFilter.getBranchName(branchId),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          )),
+              )),
         ],
         onSelected: (value) {
           branchFilter.selectBranch(value);
@@ -223,7 +225,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildEnhancedStatCardsGrid(BuildContext context) {
-    final Timestamp startOfShift = _getBusinessStartTimestamp();
+    // Determine crossAxisCount based on screen width
+    int crossAxisCount = ResponsiveHelper.isDesktop(context)
+        ? 4
+        : ResponsiveHelper.isTablet(context)
+            ? 4
+            : 2;
+
+    // Adjust Aspect Ratio based on screen size to prevent stretching
+    double childAspectRatio = ResponsiveHelper.isDesktop(context)
+        ? 1.5
+        : ResponsiveHelper.isTablet(context)
+            ? 1.3
+            : 1.3;
 
     return Container(
       decoration: BoxDecoration(
@@ -238,91 +252,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       padding: const EdgeInsets.all(20),
-      child: Column(
+      child: GridView.count(
+        crossAxisCount: crossAxisCount,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: childAspectRatio,
         children: [
-          Row(
-            children: [
-              // 1. Today's Orders
-              Expanded(
-                child: _buildStatCardWrapper(
-                  // ✅ Use filtered query from OrderService
-                  stream: _getTodayOrdersStream(context),
-                  builder: (context, snapshot) {
-                    final count =
-                    snapshot.hasData ? snapshot.data!.docs.length : 0;
-                    return _EnhancedStatCard(
-                      title: "Today's Orders",
-                      value: count.toString(),
-                      icon: Icons.shopping_bag_outlined,
-                      color: Colors.blueAccent,
-                      onTap: () => _navigateToOrders(context),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 2. Active Riders
-              Expanded(
-                child: _buildStatCardWrapper(
-                  stream: _getActiveDriversStream(context),
-                  builder: (context, snapshot) {
-                    final count =
-                    snapshot.hasData ? snapshot.data!.docs.length : 0;
-                    return _EnhancedStatCard(
-                      title: 'Active Riders',
-                      value: count.toString(),
-                      icon: Icons.delivery_dining_outlined,
-                      color: Colors.green,
-                      onTap: () => _navigateToRiders(context),
-                    );
-                  },
-                ),
-              ),
-            ],
+          // 1. Today's Orders
+          _buildStatCardWrapper(
+            stream: _getTodayOrdersStream(context),
+            builder: (context, snapshot) {
+              final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              return _EnhancedStatCard(
+                title: "Today's Orders",
+                value: count.toString(),
+                icon: Icons.shopping_bag_outlined,
+                color: Colors.blueAccent,
+                onTap: () => _navigateToOrders(context),
+              );
+            },
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              // 3. Revenue (EXCLUDING REFUNDED)
-              Expanded(
-                child: _buildStatCardWrapper(
-                  stream: _getTodayOrdersStream(context),
-                  builder: (context, snapshot) {
-                    double totalRevenue = 0;
-                    if (snapshot.hasData) {
-                      // ✅ ROBUST REVENUE LOGIC via OrderService
-                      totalRevenue = OrderService.calculateRevenue(snapshot.data!.docs);
-                    }
-                    return _EnhancedStatCard(
-                      title: 'Revenue',
-                      value: 'QAR ${totalRevenue.toStringAsFixed(2)}',
-                      icon: Icons.attach_money_outlined,
-                      color: Colors.orangeAccent,
-                      onTap: () => _navigateToOrders(context),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              // 4. Menu Items
-              Expanded(
-                child: _buildStatCardWrapper(
-                  // ✅ Use filtered menu query
-                  stream: _getAvailableMenuItemsStream(context),
-                  builder: (context, snapshot) {
-                    final count =
-                    snapshot.hasData ? snapshot.data!.docs.length : 0;
-                    return _EnhancedStatCard(
-                      title: 'Menu Items',
-                      value: count.toString(),
-                      icon: Icons.restaurant_menu,
-                      color: Colors.purpleAccent,
-                      onTap: () => _navigateToMenuManagement(context),
-                    );
-                  },
-                ),
-              ),
-            ],
+          // 2. Active Riders
+          _buildStatCardWrapper(
+            stream: _getActiveDriversStream(context),
+            builder: (context, snapshot) {
+              final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              return _EnhancedStatCard(
+                title: 'Active Riders',
+                value: count.toString(),
+                icon: Icons.delivery_dining_outlined,
+                color: Colors.green,
+                onTap: () => _navigateToRiders(context),
+              );
+            },
+          ),
+          // 3. Revenue
+          _buildStatCardWrapper(
+            stream: _getTodayOrdersStream(context),
+            builder: (context, snapshot) {
+              double totalRevenue = 0;
+              if (snapshot.hasData) {
+                totalRevenue =
+                    OrderService.calculateRevenue(snapshot.data!.docs);
+              }
+              return _EnhancedStatCard(
+                title: 'Revenue',
+                value: 'QAR ${totalRevenue.toStringAsFixed(2)}',
+                icon: Icons.attach_money_outlined,
+                color: Colors.orangeAccent,
+                onTap: () => _navigateToOrders(context),
+              );
+            },
+          ),
+          // 4. Menu Items
+          _buildStatCardWrapper(
+            stream: _getAvailableMenuItemsStream(context),
+            builder: (context, snapshot) {
+              final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              return _EnhancedStatCard(
+                title: 'Menu Items',
+                value: count.toString(),
+                icon: Icons.restaurant_menu,
+                color: Colors.purpleAccent,
+                onTap: () => _navigateToMenuManagement(context),
+              );
+            },
           ),
         ],
       ),
@@ -344,8 +340,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatCardWrapper({
     required Stream<QuerySnapshot<Map<String, dynamic>>> stream,
     required Widget Function(
-        BuildContext, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
-    builder,
+            BuildContext, AsyncSnapshot<QuerySnapshot<Map<String, dynamic>>>)
+        builder,
   }) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
@@ -443,18 +439,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return _buildEmptyState();
                 }
-                  // Only take up to 5 orders for the recent list
-                  final recentOrders = snapshot.data!.docs.take(5).toList();
-                  
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: recentOrders.length,
-                    separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      var order = recentOrders[index];
-                      return _EnhancedOrderListItem(order: order);
-                    },
+                // Only take up to 5 orders for the recent list
+                final recentOrders = snapshot.data!.docs.take(5).toList();
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: recentOrders.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    var order = recentOrders[index];
+                    return _EnhancedOrderListItem(order: order);
+                  },
                 );
               },
             ),
@@ -526,13 +522,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final OrderService _orderService = OrderService();
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayOrdersStream(BuildContext context) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getTodayOrdersStream(
+      BuildContext context) {
     // ✅ FIX: Use listen: true to react to branch changes from backend
     final userScope = Provider.of<UserScopeService>(context, listen: true);
-    final branchFilter = Provider.of<BranchFilterService>(context, listen: true);
-    
+    final branchFilter =
+        Provider.of<BranchFilterService>(context, listen: true);
+
     // Get branch IDs to filter by (respects branch selector)
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     return _orderService.getTodayOrdersStream(
       userScope: userScope,
@@ -540,12 +539,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _getActiveDriversStream(BuildContext context) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getActiveDriversStream(
+      BuildContext context) {
     // ✅ FIX: Use listen: true to react to branch changes from backend
     final userScope = Provider.of<UserScopeService>(context, listen: true);
-    final branchFilter = Provider.of<BranchFilterService>(context, listen: true);
-    
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final branchFilter =
+        Provider.of<BranchFilterService>(context, listen: true);
+
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     return _orderService.getActiveDriversStream(
       userScope: userScope,
@@ -553,12 +555,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> _getAvailableMenuItemsStream(BuildContext context) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> _getAvailableMenuItemsStream(
+      BuildContext context) {
     // ✅ FIX: Use listen: true to react to branch changes from backend
     final userScope = Provider.of<UserScopeService>(context, listen: true);
-    final branchFilter = Provider.of<BranchFilterService>(context, listen: true);
-    
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final branchFilter =
+        Provider.of<BranchFilterService>(context, listen: true);
+
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     return _orderService.getAvailableMenuItemsStream(
       userScope: userScope,
@@ -727,7 +732,6 @@ class _EnhancedErrorStatCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _EnhancedOrderListItem extends StatelessWidget {
@@ -762,7 +766,8 @@ class _EnhancedOrderListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     // ✅ IMPROVED: Use OrderDataHelper for safe data extraction
     final orderData = OrderDataHelper.fromSnapshot(order);
-    final String displayOrderNumber = OrderNumberHelper.getDisplayNumber(orderData.data, orderId: order.id);
+    final String displayOrderNumber =
+        OrderNumberHelper.getDisplayNumber(orderData.data, orderId: order.id);
     final String rawOrderType = orderData.getString('Order_type', 'delivery');
     final String formattedOrderType = _formatOrderType(rawOrderType);
     final String status = orderData.getString('status', 'pending');
@@ -773,7 +778,8 @@ class _EnhancedOrderListItem extends StatelessWidget {
         : 'N/A';
 
     // ✅ IMPROVED: Use shared StatusUtils
-    final Color statusColor = StatusUtils.getColorForOrderType(status, rawOrderType);
+    final Color statusColor =
+        StatusUtils.getColorForOrderType(status, rawOrderType);
 
     return Container(
       decoration: BoxDecoration(
@@ -855,7 +861,8 @@ class _EnhancedOrderListItem extends StatelessWidget {
                           Flexible(
                             child: Text(
                               ' • $placedDate',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -879,7 +886,6 @@ class _EnhancedOrderListItem extends StatelessWidget {
     );
   }
 }
-
 
 class _OrderPopupDialog extends StatefulWidget {
   final DocumentSnapshot order;
@@ -926,7 +932,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order status updated to "${StatusUtils.getDisplayText(newStatus)}"'),
+            content: Text(
+                'Order status updated to "${StatusUtils.getDisplayText(newStatus)}"'),
             backgroundColor: Colors.green,
           ),
         );
@@ -952,13 +959,12 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     }
   }
 
-
   // ✅ ROBUST: Uses RiderAssignmentService for transaction-based assignment
   Future<void> _assignRider(String orderId) async {
     // Capture references BEFORE async operations
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    
+
     final userScope = context.read<UserScopeService>();
     final currentBranchId = userScope.branchId;
 
@@ -974,13 +980,13 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
       });
 
       final result = await RiderAssignmentService.manualAssignRider(
-          orderId: orderId,
-          riderId: rider,
+        orderId: orderId,
+        riderId: rider,
       );
 
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         // Use pre-captured ScaffoldMessengerState (safe across async gaps)
         scaffoldMessenger.showSnackBar(
           SnackBar(
@@ -988,7 +994,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             backgroundColor: result.backgroundColor,
           ),
         );
-        
+
         if (result.isSuccess) navigator.pop();
       }
     }
@@ -1013,15 +1019,18 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     // Check Auto-Assignment
     final bool isAutoAssigning =
         data.containsKey('autoAssignStarted') && orderTypeLower == 'delivery';
-    final bool needsManualAssignment = status == AppConstants.statusNeedsAssignment;
+    final bool needsManualAssignment =
+        status == AppConstants.statusNeedsAssignment;
 
     const EdgeInsets btnPadding =
-    EdgeInsets.symmetric(horizontal: 14, vertical: 10);
+        EdgeInsets.symmetric(horizontal: 14, vertical: 10);
     const Size btnMinSize = Size(0, 40);
 
     // --- UNIVERSAL ACTIONS (Exclude cancelled/refunded) ---
     final statusLower = status.toLowerCase();
-    if (statusLower != 'pending' && statusLower != 'cancelled' && statusLower != 'refunded') {
+    if (statusLower != 'pending' &&
+        statusLower != 'cancelled' &&
+        statusLower != 'refunded') {
       buttons.add(
         OutlinedButton.icon(
           icon: const Icon(Icons.print, size: 16),
@@ -1035,7 +1044,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1047,14 +1056,15 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
         ElevatedButton.icon(
           icon: const Icon(Icons.check, size: 16),
           label: const Text('Accept Order'),
-          onPressed: () => updateOrderStatus(orderId, AppConstants.statusPreparing),
+          onPressed: () =>
+              updateOrderStatus(orderId, AppConstants.statusPreparing),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1062,19 +1072,23 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
 
     // For non-delivery orders, show completion button when preparing OR needs_rider_assignment
     // (needs_rider_assignment shouldn't apply to non-delivery orders but may exist)
-    if (orderTypeLower != 'delivery' && (status == AppConstants.statusPreparing || needsManualAssignment)) {
+    if (orderTypeLower != 'delivery' &&
+        (status == AppConstants.statusPreparing || needsManualAssignment)) {
       buttons.add(
         ElevatedButton.icon(
           icon: const Icon(Icons.task_alt, size: 16),
-          label: Text(orderTypeLower == 'dine_in' ? 'Served to Table' : 'Handed to Customer'),
-          onPressed: () => updateOrderStatus(orderId, AppConstants.statusDelivered),
+          label: Text(orderTypeLower == 'dine_in'
+              ? 'Served to Table'
+              : 'Handed to Customer'),
+          onPressed: () =>
+              updateOrderStatus(orderId, AppConstants.statusDelivered),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green.shade700,
             foregroundColor: Colors.white,
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1082,7 +1096,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
 
     // DELIVERY
     if (orderTypeLower == 'delivery') {
-      if ((status == AppConstants.statusPreparing || needsManualAssignment) && !isAutoAssigning) {
+      if ((status == AppConstants.statusPreparing || needsManualAssignment) &&
+          !isAutoAssigning) {
         buttons.add(
           ElevatedButton.icon(
             icon: const Icon(Icons.delivery_dining, size: 16),
@@ -1091,7 +1106,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             onPressed: () => _assignRider(orderId),
             style: ElevatedButton.styleFrom(
               backgroundColor:
-              needsManualAssignment ? Colors.orange : Colors.blue,
+                  needsManualAssignment ? Colors.orange : Colors.blue,
               foregroundColor: Colors.white,
               padding: btnPadding,
               minimumSize: btnMinSize,
@@ -1107,7 +1122,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
           ElevatedButton.icon(
             icon: const Icon(Icons.task_alt, size: 16),
             label: const Text('Mark as Delivered'),
-            onPressed: () => updateOrderStatus(orderId, AppConstants.statusDelivered),
+            onPressed: () =>
+                updateOrderStatus(orderId, AppConstants.statusDelivered),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
@@ -1184,7 +1200,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             padding: btnPadding,
             minimumSize: btnMinSize,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       );
@@ -1230,7 +1246,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
             flex: 2,
             child: Text(label,
                 style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           ),
           Expanded(
             flex: 3,
@@ -1258,7 +1274,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
               TextSpan(
                 text: name,
                 style:
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 children: [
                   TextSpan(
                     text: ' (x$qty)',
@@ -1318,7 +1334,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
     final status = data['status']?.toString() ?? 'pending';
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
-    final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
     final double deliveryFee = (data['deliveryFee'] as num? ?? 0.0).toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
@@ -1352,7 +1369,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                         Text(
                             timestamp != null
                                 ? DateFormat('MMM dd, yyyy hh:mm a')
-                                .format(timestamp)
+                                    .format(timestamp)
                                 : 'No date',
                             style: TextStyle(
                                 color: Colors.grey[600], fontSize: 14)),
@@ -1361,7 +1378,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                   ),
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _getStatusColor(status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -1380,7 +1397,8 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                         const SizedBox(width: 6),
                         Text(_getStatusDisplayText(status, orderType),
                             style: TextStyle(
-                                color: _getStatusColorForOrderType(status, orderType),
+                                color: _getStatusColorForOrderType(
+                                    status, orderType),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12)),
                       ],
@@ -1429,7 +1447,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                     border: Border.all(color: Colors.grey[200]!)),
                 child: Column(
                     children:
-                    items.map((item) => _buildItemRow(item)).toList()),
+                        items.map((item) => _buildItemRow(item)).toList()),
               ),
               const SizedBox(height: 20),
               _buildSectionHeader('Order Summary', Icons.summarize),
@@ -1460,7 +1478,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed:
-                  _isLoading ? null : () => Navigator.of(context).pop(),
+                      _isLoading ? null : () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1485,7 +1503,6 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
   Color _getStatusColorForOrderType(String status, String orderType) =>
       StatusUtils.getColorForOrderType(status, orderType);
 }
-
 
 class _RiderSelectionDialog extends StatelessWidget {
   final String? currentBranchId;

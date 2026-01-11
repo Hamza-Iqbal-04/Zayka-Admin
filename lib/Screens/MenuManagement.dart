@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'BranchManagement.dart';
 import '../main.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -15,7 +16,8 @@ class InventoryScreen extends StatefulWidget {
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends State<InventoryScreen> with SingleTickerProviderStateMixin {
+class _InventoryScreenState extends State<InventoryScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
 
@@ -234,7 +236,8 @@ class _CategoriesTabState extends State<_CategoriesTab> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.category_outlined, size: 64, color: Colors.grey[400]),
+                Icon(Icons.category_outlined,
+                    size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No categories found.',
@@ -294,6 +297,29 @@ class _CategoriesTabState extends State<_CategoriesTab> {
           );
         }
 
+        // ✅ RESPONSIVE CATEGORIES GRID
+        if (ResponsiveHelper.isTablet(context) ||
+            ResponsiveHelper.isDesktop(context)) {
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 4 : 3,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: filteredDocs.length,
+            itemBuilder: (context, index) {
+              final category = filteredDocs[index];
+              return _CategoryCard(
+                category: category,
+                onEdit: () => _showEditCategoryDialog(context, category),
+                onDelete: () => _deleteCategory(context, category),
+              );
+            },
+          );
+        }
+
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           itemCount: filteredDocs.length,
@@ -311,27 +337,33 @@ class _CategoriesTabState extends State<_CategoriesTab> {
     );
   }
 
-  void _showEditCategoryDialog(BuildContext context, QueryDocumentSnapshot category) {
+  void _showEditCategoryDialog(
+      BuildContext context, QueryDocumentSnapshot category) {
     showDialog(
       context: context,
       builder: (context) => _CategoryDialog(doc: category),
     );
   }
 
-  Future<void> _deleteCategory(BuildContext context, QueryDocumentSnapshot category) async {
+  Future<void> _deleteCategory(
+      BuildContext context, QueryDocumentSnapshot category) async {
     final shouldDelete = await _confirmDelete(context, 'category');
     if (shouldDelete) {
       try {
         await category.reference.delete();
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Category deleted successfully.'), backgroundColor: Colors.green),
+            const SnackBar(
+                content: Text('Category deleted successfully.'),
+                backgroundColor: Colors.green),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text('Failed to delete: $e'),
+                backgroundColor: Colors.red),
           );
         }
       }
@@ -340,36 +372,44 @@ class _CategoriesTabState extends State<_CategoriesTab> {
 
   Future<bool> _confirmDelete(BuildContext context, String itemType) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            const SizedBox(width: 12),
-            Text('Delete ${itemType.capitalize()}?', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete this $itemType? This action cannot be undone.',
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w500)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          context: context,
+          builder: (context) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.orange, size: 28),
+                const SizedBox(width: 12),
+                Text('Delete ${itemType.capitalize()}?',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Text(
+              'Are you sure you want to delete this $itemType? This action cannot be undone.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Delete',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 }
 
@@ -427,15 +467,17 @@ class _CategoryCard extends StatelessWidget {
                     ),
                     child: imageUrl.isNotEmpty
                         ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(Icons.category_rounded, color: Colors.deepPurple, size: 32),
-                      ),
-                    )
-                        : Icon(Icons.category_rounded, color: Colors.deepPurple, size: 32),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.category_rounded,
+                                      color: Colors.deepPurple, size: 32),
+                            ),
+                          )
+                        : Icon(Icons.category_rounded,
+                            color: Colors.deepPurple, size: 32),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -478,11 +520,13 @@ class _CategoryCard extends StatelessWidget {
                               child: Switch(
                                 value: isActive,
                                 onChanged: (value) async {
-                                  await category.reference.update({'isActive': value});
+                                  await category.reference
+                                      .update({'isActive': value});
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Category status updated to ${value ? "Active" : "Inactive"}!'),
+                                        content: Text(
+                                            'Category status updated to ${value ? "Active" : "Inactive"}!'),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -498,12 +542,14 @@ class _CategoryCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Sort Order: $sortOrder',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Branches: ${branchIds.length}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
                         ),
                       ],
                     ),
@@ -514,19 +560,26 @@ class _CategoryCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                      color: isActive
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isActive ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+                        color: isActive
+                            ? Colors.green.withOpacity(0.3)
+                            : Colors.red.withOpacity(0.3),
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isActive ? Icons.radio_button_checked : Icons.radio_button_off,
+                          isActive
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
                           size: 16,
                           color: isActive ? Colors.green : Colors.red,
                         ),
@@ -554,8 +607,10 @@ class _CategoryCard extends StatelessWidget {
                       onPressed: () => _showCategoryDetails(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.deepPurple,
-                        side: BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(
+                            color: Colors.deepPurple.withOpacity(0.5)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -568,8 +623,10 @@ class _CategoryCard extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -579,7 +636,8 @@ class _CategoryCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red),
                       onPressed: onDelete,
                       tooltip: 'Delete Category',
                       padding: const EdgeInsets.all(12),
@@ -598,9 +656,10 @@ class _CategoryCard extends StatelessWidget {
     final data = category.data() as Map<String, dynamic>;
     final imageUrl = data['imageUrl'] as String?;
     final branchIds = data['branchIds'];
-    final branchIdsText = branchIds != null && branchIds is List && branchIds.isNotEmpty
-        ? branchIds.map((id) => id.toString()).join(', ')
-        : 'Not assigned';
+    final branchIdsText =
+        branchIds != null && branchIds is List && branchIds.isNotEmpty
+            ? branchIds.map((id) => id.toString()).join(', ')
+            : 'Not assigned';
 
     showDialog(
       context: context,
@@ -629,7 +688,8 @@ class _CategoryCard extends StatelessWidget {
               Container(
                 height: 120,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                   gradient: LinearGradient(
                     colors: [
                       Colors.deepPurple.shade400,
@@ -644,11 +704,13 @@ class _CategoryCard extends StatelessWidget {
                     if (imageUrl?.isNotEmpty == true)
                       Positioned.fill(
                         child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
                           child: Image.network(
                             imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildDefaultHeader(),
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildDefaultHeader(),
                           ),
                         ),
                       )
@@ -663,7 +725,8 @@ class _CategoryCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          icon: const Icon(Icons.close_rounded,
+                              color: Colors.white),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
@@ -691,7 +754,8 @@ class _CategoryCard extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (data['name_ar'] != null && data['name_ar'].isNotEmpty)
+                          if (data['name_ar'] != null &&
+                              data['name_ar'].isNotEmpty)
                             Text(
                               data['name_ar'],
                               style: const TextStyle(
@@ -724,27 +788,42 @@ class _CategoryCard extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: (data['isActive'] == true ? Colors.green : Colors.red).withOpacity(0.1),
+                              color: (data['isActive'] == true
+                                      ? Colors.green
+                                      : Colors.red)
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: (data['isActive'] == true ? Colors.green : Colors.red).withOpacity(0.3),
+                                color: (data['isActive'] == true
+                                        ? Colors.green
+                                        : Colors.red)
+                                    .withOpacity(0.3),
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  data['isActive'] == true ? Icons.check_circle : Icons.cancel,
-                                  color: data['isActive'] == true ? Colors.green : Colors.red,
+                                  data['isActive'] == true
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  color: data['isActive'] == true
+                                      ? Colors.green
+                                      : Colors.red,
                                   size: 18,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  data['isActive'] == true ? 'ACTIVE' : 'INACTIVE',
+                                  data['isActive'] == true
+                                      ? 'ACTIVE'
+                                      : 'INACTIVE',
                                   style: TextStyle(
-                                    color: data['isActive'] == true ? Colors.green : Colors.red,
+                                    color: data['isActive'] == true
+                                        ? Colors.green
+                                        : Colors.red,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -777,7 +856,9 @@ class _CategoryCard extends StatelessWidget {
                             Icons.business_outlined,
                             'Branch IDs',
                             branchIdsText,
-                            color: (branchIds != null && branchIds is List && branchIds.isNotEmpty)
+                            color: (branchIds != null &&
+                                    branchIds is List &&
+                                    branchIds.isNotEmpty)
                                 ? Colors.blue
                                 : Colors.grey,
                           ),
@@ -833,11 +914,13 @@ class _CategoryCard extends StatelessWidget {
                               label: const Text('Edit Category'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.deepPurple,
-                                side: BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
+                                side: BorderSide(
+                                    color: Colors.deepPurple.withOpacity(0.5)),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -856,7 +939,8 @@ class _CategoryCard extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -896,7 +980,8 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildEnhancedDetailSection(String title, IconData icon, List<Widget> children) {
+  Widget _buildEnhancedDetailSection(
+      String title, IconData icon, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -942,7 +1027,8 @@ class _CategoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildEnhancedDetailRow(IconData icon, String label, String value, {Color? color}) {
+  Widget _buildEnhancedDetailRow(IconData icon, String label, String value,
+      {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -1110,6 +1196,31 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
           );
         }
 
+        // ✅ RESPONSIVE MENU ITEMS GRID
+        if (ResponsiveHelper.isTablet(context) ||
+            ResponsiveHelper.isDesktop(context)) {
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 4 : 3,
+              crossAxisSpacing: 16,
+              mainAxisSpacing:
+                  16, // Use mainAxisSpacing for vertical gaps in GridView
+              childAspectRatio:
+                  0.8, // Adjusted specifically for menu item cards with images
+            ),
+            itemCount: filteredDocs.length,
+            itemBuilder: (context, index) {
+              final item = filteredDocs[index];
+              return _MenuItemCard(
+                item: item,
+                onEdit: () => _showEditMenuItemDialog(context, item),
+                onDelete: () => _deleteMenuItem(context, item),
+              );
+            },
+          );
+        }
+
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           itemCount: filteredDocs.length,
@@ -1127,27 +1238,33 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
     );
   }
 
-  void _showEditMenuItemDialog(BuildContext context, QueryDocumentSnapshot item) {
+  void _showEditMenuItemDialog(
+      BuildContext context, QueryDocumentSnapshot item) {
     showDialog(
       context: context,
       builder: (context) => _MenuItemDialog(doc: item),
     );
   }
 
-  Future<void> _deleteMenuItem(BuildContext context, QueryDocumentSnapshot item) async {
+  Future<void> _deleteMenuItem(
+      BuildContext context, QueryDocumentSnapshot item) async {
     final shouldDelete = await _confirmDelete(context, 'menu item');
     if (shouldDelete) {
       try {
         await item.reference.delete();
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Menu item deleted successfully.'), backgroundColor: Colors.green),
+            const SnackBar(
+                content: Text('Menu item deleted successfully.'),
+                backgroundColor: Colors.green),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text('Failed to delete: $e'),
+                backgroundColor: Colors.red),
           );
         }
       }
@@ -1156,36 +1273,44 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
 
   Future<bool> _confirmDelete(BuildContext context, String itemType) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            const SizedBox(width: 12),
-            Text('Delete ${itemType.capitalize()}?', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete this $itemType? This action cannot be undone.',
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w500)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          context: context,
+          builder: (context) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Colors.orange, size: 28),
+                const SizedBox(width: 12),
+                Text('Delete ${itemType.capitalize()}?',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: Text(
+              'Are you sure you want to delete this $itemType? This action cannot be undone.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Delete',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 }
 
@@ -1216,7 +1341,8 @@ class _MenuItemCard extends StatelessWidget {
     final variants = data['variants'] as Map? ?? {};
     final tags = data['tags'] as Map? ?? {};
 
-    final outOfStockBranches = List<String>.from(data['outOfStockBranches'] ?? []);
+    final outOfStockBranches =
+        List<String>.from(data['outOfStockBranches'] ?? []);
     final userScope = context.read<UserScopeService>();
     final isOutOfStock = userScope.branchId != null &&
         outOfStockBranches.contains(userScope.branchId);
@@ -1251,23 +1377,23 @@ class _MenuItemCard extends StatelessWidget {
                     ),
                     child: imageUrl != null && imageUrl.isNotEmpty
                         ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(
-                              Icons.fastfood_rounded,
-                              color: Colors.amber.shade600,
-                              size: 40,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                Icons.fastfood_rounded,
+                                color: Colors.amber.shade600,
+                                size: 40,
+                              ),
                             ),
-                      ),
-                    )
+                          )
                         : Icon(
-                      Icons.fastfood_rounded,
-                      color: Colors.amber.shade600,
-                      size: 40,
-                    ),
+                            Icons.fastfood_rounded,
+                            color: Colors.amber.shade600,
+                            size: 40,
+                          ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1353,7 +1479,9 @@ class _MenuItemCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: hasDiscount ? Colors.green : Colors.deepPurple,
+                                color: hasDiscount
+                                    ? Colors.green
+                                    : Colors.deepPurple,
                               ),
                             ),
                             if (hasDiscount) ...[
@@ -1375,7 +1503,8 @@ class _MenuItemCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              if (variants.isNotEmpty || tags.isNotEmpty) const SizedBox(height: 16),
+              if (variants.isNotEmpty || tags.isNotEmpty)
+                const SizedBox(height: 16),
               if (variants.isNotEmpty || tags.isNotEmpty)
                 Wrap(
                   spacing: 8.0,
@@ -1384,11 +1513,13 @@ class _MenuItemCard extends StatelessWidget {
                   children: [
                     if (variants.isNotEmpty)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.blue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                          border:
+                              Border.all(color: Colors.blue.withOpacity(0.2)),
                         ),
                         child: Text(
                           '${variants.length} ${variants.length > 1 ? "Variants" : "Variant"}',
@@ -1399,15 +1530,15 @@ class _MenuItemCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ...tags.entries
-                        .where((e) => e.value == true)
-                        .map((entry) {
+                    ...tags.entries.where((e) => e.value == true).map((entry) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.deepPurple.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
+                          border: Border.all(
+                              color: Colors.deepPurple.withOpacity(0.2)),
                         ),
                         child: Text(
                           entry.key,
@@ -1421,16 +1552,19 @@ class _MenuItemCard extends StatelessWidget {
                     }),
                     if (isOutOfStock)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.2)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.inventory_2, size: 12, color: Colors.orange.shade700),
+                            Icon(Icons.inventory_2,
+                                size: 12, color: Colors.orange.shade700),
                             const SizedBox(width: 4),
                             Text(
                               'OUT OF STOCK',
@@ -1449,7 +1583,8 @@ class _MenuItemCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isAvailable
                           ? Colors.green.withOpacity(0.1)
@@ -1518,7 +1653,8 @@ class _MenuItemCard extends StatelessWidget {
                       onPressed: () => _showMenuItemDetails(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.deepPurple,
-                        side: BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
+                        side: BorderSide(
+                            color: Colors.deepPurple.withOpacity(0.5)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1537,7 +1673,8 @@ class _MenuItemCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1547,7 +1684,8 @@ class _MenuItemCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red),
                       onPressed: onDelete,
                       tooltip: 'Delete Menu Item',
                       padding: const EdgeInsets.all(12),
@@ -1566,15 +1704,20 @@ class _MenuItemCard extends StatelessWidget {
     final data = item.data() as Map<String, dynamic>;
     final imageUrl = data['imageUrl'] as String?;
     final variants = (data['variants'] as Map?)?.map(
-            (k, v) => MapEntry(k.toString(), v as Map<String, dynamic>)) ?? {};
-    final tags = (data['tags'] as Map?)?.map((k, v) => MapEntry(k.toString(), v as bool)) ?? {};
+            (k, v) => MapEntry(k.toString(), v as Map<String, dynamic>)) ??
+        {};
+    final tags = (data['tags'] as Map?)
+            ?.map((k, v) => MapEntry(k.toString(), v as bool)) ??
+        {};
     final estimatedTime = data['EstimatedTime'] as String?;
     final branchIds = data['branchIds'];
-    final branchIdsText = branchIds != null && branchIds is List && branchIds.isNotEmpty
-        ? branchIds.map((id) => id.toString()).join(', ')
-        : 'Not assigned';
+    final branchIdsText =
+        branchIds != null && branchIds is List && branchIds.isNotEmpty
+            ? branchIds.map((id) => id.toString()).join(', ')
+            : 'Not assigned';
 
-    final outOfStockBranches = List<String>.from(data['outOfStockBranches'] ?? []);
+    final outOfStockBranches =
+        List<String>.from(data['outOfStockBranches'] ?? []);
     final userScope = context.read<UserScopeService>();
     final isOutOfStock = userScope.branchId != null &&
         outOfStockBranches.contains(userScope.branchId);
@@ -1606,7 +1749,8 @@ class _MenuItemCard extends StatelessWidget {
               Container(
                 height: 140,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                   gradient: LinearGradient(
                     colors: [
                       Colors.amber.shade400,
@@ -1621,11 +1765,13 @@ class _MenuItemCard extends StatelessWidget {
                     if (imageUrl?.isNotEmpty == true)
                       Positioned.fill(
                         child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
                           child: Image.network(
                             imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildDefaultMenuHeader(),
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildDefaultMenuHeader(),
                           ),
                         ),
                       )
@@ -1636,7 +1782,8 @@ class _MenuItemCard extends StatelessWidget {
                         top: 16,
                         left: 16,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.amber,
                             borderRadius: BorderRadius.circular(20),
@@ -1669,7 +1816,8 @@ class _MenuItemCard extends StatelessWidget {
                         top: 16,
                         left: data['isPopular'] == true ? 100 : 16,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.orange,
                             borderRadius: BorderRadius.circular(20),
@@ -1683,7 +1831,8 @@ class _MenuItemCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.inventory_2, color: Colors.white, size: 14),
+                              Icon(Icons.inventory_2,
+                                  color: Colors.white, size: 14),
                               SizedBox(width: 4),
                               Text(
                                 'OUT OF STOCK',
@@ -1706,7 +1855,8 @@ class _MenuItemCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white),
+                          icon: const Icon(Icons.close_rounded,
+                              color: Colors.white),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
@@ -1726,7 +1876,8 @@ class _MenuItemCard extends StatelessWidget {
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
                           ),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
                         ),
                         child: Row(
                           children: [
@@ -1745,7 +1896,8 @@ class _MenuItemCard extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  if (data['name_ar'] != null && data['name_ar'].isNotEmpty)
+                                  if (data['name_ar'] != null &&
+                                      data['name_ar'].isNotEmpty)
                                     Text(
                                       data['name_ar'],
                                       style: const TextStyle(
@@ -1785,27 +1937,42 @@ class _MenuItemCard extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: (data['isAvailable'] == true ? Colors.green : Colors.red).withOpacity(0.1),
+                              color: (data['isAvailable'] == true
+                                      ? Colors.green
+                                      : Colors.red)
+                                  .withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: (data['isAvailable'] == true ? Colors.green : Colors.red).withOpacity(0.3),
+                                color: (data['isAvailable'] == true
+                                        ? Colors.green
+                                        : Colors.red)
+                                    .withOpacity(0.3),
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  data['isAvailable'] == true ? Icons.check_circle : Icons.cancel,
-                                  color: data['isAvailable'] == true ? Colors.green : Colors.red,
+                                  data['isAvailable'] == true
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  color: data['isAvailable'] == true
+                                      ? Colors.green
+                                      : Colors.red,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  data['isAvailable'] == true ? 'AVAILABLE' : 'UNAVAILABLE',
+                                  data['isAvailable'] == true
+                                      ? 'AVAILABLE'
+                                      : 'UNAVAILABLE',
                                   style: TextStyle(
-                                    color: data['isAvailable'] == true ? Colors.green : Colors.red,
+                                    color: data['isAvailable'] == true
+                                        ? Colors.green
+                                        : Colors.red,
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1857,7 +2024,9 @@ class _MenuItemCard extends StatelessWidget {
                             Icons.business_outlined,
                             'Branch IDs',
                             branchIdsText,
-                            color: (branchIds != null && branchIds is List && branchIds.isNotEmpty)
+                            color: (branchIds != null &&
+                                    branchIds is List &&
+                                    branchIds.isNotEmpty)
                                 ? Colors.blue
                                 : Colors.grey,
                           ),
@@ -1876,21 +2045,30 @@ class _MenuItemCard extends StatelessWidget {
                           Icons.tune_outlined,
                           [
                             ...variants.entries.map((variant) {
-                              final variantName = variant.value['name'] as String? ?? 'Unnamed Variant';
-                              final variantPrice = (variant.value['variantprice'] as num? ?? 0.0).toStringAsFixed(2);
+                              final variantName =
+                                  variant.value['name'] as String? ??
+                                      'Unnamed Variant';
+                              final variantPrice =
+                                  (variant.value['variantprice'] as num? ?? 0.0)
+                                      .toStringAsFixed(2);
                               return Container(
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.blue.withOpacity(0.05),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                                  border: Border.all(
+                                      color: Colors.blue.withOpacity(0.2)),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.label_outline, size: 16, color: Colors.blue.shade600),
+                                    Icon(Icons.label_outline,
+                                        size: 16, color: Colors.blue.shade600),
                                     const SizedBox(width: 8),
-                                    Expanded(child: Text(variantName, style: const TextStyle(fontWeight: FontWeight.w500))),
+                                    Expanded(
+                                        child: Text(variantName,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w500))),
                                     Text(
                                       '+QAR $variantPrice',
                                       style: TextStyle(
@@ -1917,20 +2095,29 @@ class _MenuItemCard extends StatelessWidget {
                               children: tags.entries.map((entry) {
                                 final isActive = entry.value == true;
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: isActive ? Colors.deepPurple.withOpacity(0.1) : Colors.grey[200],
+                                    color: isActive
+                                        ? Colors.deepPurple.withOpacity(0.1)
+                                        : Colors.grey[200],
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: isActive ? Colors.deepPurple.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                                      color: isActive
+                                          ? Colors.deepPurple.withOpacity(0.3)
+                                          : Colors.grey.withOpacity(0.3),
                                     ),
                                   ),
                                   child: Text(
                                     entry.key,
                                     style: TextStyle(
-                                      color: isActive ? Colors.deepPurple.shade700 : Colors.grey[600],
+                                      color: isActive
+                                          ? Colors.deepPurple.shade700
+                                          : Colors.grey[600],
                                       fontSize: 12,
-                                      fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                                      fontWeight: isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                     ),
                                   ),
                                 );
@@ -1952,11 +2139,13 @@ class _MenuItemCard extends StatelessWidget {
                               label: const Text('Edit Item'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.deepPurple,
-                                side: BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
+                                side: BorderSide(
+                                    color: Colors.deepPurple.withOpacity(0.5)),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -1975,7 +2164,8 @@ class _MenuItemCard extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                             ),
                           ),
@@ -2015,7 +2205,8 @@ class _MenuItemCard extends StatelessWidget {
     );
   }
 
-  Widget _buildEnhancedMenuDetailSection(String title, IconData icon, List<Widget> children) {
+  Widget _buildEnhancedMenuDetailSection(
+      String title, IconData icon, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2061,7 +2252,8 @@ class _MenuItemCard extends StatelessWidget {
     );
   }
 
-  Widget _buildEnhancedMenuDetailRow(IconData icon, String label, String value, {Color? color}) {
+  Widget _buildEnhancedMenuDetailRow(IconData icon, String label, String value,
+      {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -2130,7 +2322,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     _nameController = TextEditingController(text: data['name'] ?? '');
     _nameArController = TextEditingController(text: data['name_ar'] ?? '');
     _imageUrlController = TextEditingController(text: data['imageUrl'] ?? '');
-    _sortOrderController = TextEditingController(text: (data['sortOrder'] ?? 0).toString());
+    _sortOrderController =
+        TextEditingController(text: (data['sortOrder'] ?? 0).toString());
     _isActive = data['isActive'] ?? true;
     _selectedBranchIds = List<String>.from(data['branchIds'] ?? []);
   }
@@ -2155,8 +2348,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               backgroundColor: Colors.red,
-              content: Text('Super Admins must select at least one branch.')
-          ),
+              content: Text('Super Admins must select at least one branch.')),
         );
         setState(() => _isLoading = false);
         return;
@@ -2284,15 +2476,17 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   }
 
   Future<String> _convertAndUploadImage(
-      String imagePath,
-      String storageFolder,
-      ) async {
+    String imagePath,
+    String storageFolder,
+  ) async {
     try {
       final File imageFile = File(imagePath);
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.uri.pathSegments.last}';
+      final String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.uri.pathSegments.last}';
       final String storagePath = '$storageFolder/$fileName';
 
-      final Reference storageRef = FirebaseStorage.instance.ref().child(storagePath);
+      final Reference storageRef =
+          FirebaseStorage.instance.ref().child(storagePath);
       final UploadTask uploadTask = storageRef.putFile(imageFile);
 
       final TaskSnapshot snapshot = await uploadTask;
@@ -2384,7 +2578,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildSectionHeader('Basic Information', Icons.info_outline),
+                    _buildSectionHeader(
+                        'Basic Information', Icons.info_outline),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _nameController,
@@ -2394,7 +2589,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                         filled: true,
                         fillColor: Colors.white,
                       ),
-                      validator: (val) => val!.isEmpty ? 'Name is required' : null,
+                      validator: (val) =>
+                          val!.isEmpty ? 'Name is required' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -2444,7 +2640,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                           ),
                         ),
                       ],
@@ -2468,7 +2665,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.business, color: Colors.blue[600], size: 20),
+                            Icon(Icons.business,
+                                color: Colors.blue[600], size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -2511,7 +2709,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
-                          _isActive ? 'Category is visible to customers' : 'Category is hidden from customers',
+                          _isActive
+                              ? 'Category is visible to customers'
+                              : 'Category is hidden from customers',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -2521,7 +2721,9 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                         onChanged: (value) => setState(() => _isActive = value),
                         activeColor: Colors.green,
                         secondary: Icon(
-                          _isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                          _isActive
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
                           color: _isActive ? Colors.green : Colors.grey,
                         ),
                       ),
@@ -2534,7 +2736,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.grey[700],
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2559,13 +2762,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
                           : Text(_isEdit ? 'Update Category' : 'Add Category'),
                     ),
                   ),
@@ -2632,11 +2836,15 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
     _nameController = TextEditingController(text: data['name'] ?? '');
     _nameArController = TextEditingController(text: data['name_ar'] ?? '');
     _descController = TextEditingController(text: data['description'] ?? '');
-    _priceController = TextEditingController(text: (data['price'] as num?)?.toString() ?? '');
+    _priceController =
+        TextEditingController(text: (data['price'] as num?)?.toString() ?? '');
     _imageUrlController = TextEditingController(text: data['imageUrl'] ?? '');
-    _discountedPriceController = TextEditingController(text: (data['discountedPrice'] as num?)?.toString() ?? '');
-    _estimatedTimeController = TextEditingController(text: _getStringFromDynamic(data['EstimatedTime'], '25-35'));
-    _sortOrderController = TextEditingController(text: _getStringFromDynamic(data['sortOrder'], '0'));
+    _discountedPriceController = TextEditingController(
+        text: (data['discountedPrice'] as num?)?.toString() ?? '');
+    _estimatedTimeController = TextEditingController(
+        text: _getStringFromDynamic(data['EstimatedTime'], '25-35'));
+    _sortOrderController = TextEditingController(
+        text: _getStringFromDynamic(data['sortOrder'], '0'));
 
     _isAvailable = data['isAvailable'] ?? true;
     _isPopular = data['isPopular'] ?? false;
@@ -2647,10 +2855,11 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
 
     final variantsData = data['variants'] as Map<String, dynamic>? ?? {};
     _variants.addAll(variantsData.entries.map((entry) => {
-      'id': entry.key,
-      'name': entry.value['name'] ?? '',
-      'variantprice': (entry.value['variantprice'] as num?)?.toDouble() ?? 0.0,
-    }));
+          'id': entry.key,
+          'name': entry.value['name'] ?? '',
+          'variantprice':
+              (entry.value['variantprice'] as num?)?.toDouble() ?? 0.0,
+        }));
 
     final tagsData = data['tags'] as Map<String, dynamic>? ?? {};
     _tags.forEach((key, value) {
@@ -2659,8 +2868,10 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
 
     final userScope = context.read<UserScopeService>();
     final currentBranch = userScope.branchId;
-    final outOfStockBranches = List<String>.from(data['outOfStockBranches'] ?? []);
-    _isOutOfStock = currentBranch != null && outOfStockBranches.contains(currentBranch);
+    final outOfStockBranches =
+        List<String>.from(data['outOfStockBranches'] ?? []);
+    _isOutOfStock =
+        currentBranch != null && outOfStockBranches.contains(currentBranch);
   }
 
   Future<void> _saveMenuItem() async {
@@ -2695,7 +2906,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
       }
     }
 
-    final double? discountedPrice = double.tryParse(_discountedPriceController.text);
+    final double? discountedPrice =
+        double.tryParse(_discountedPriceController.text);
 
     // ✅ CRITICAL FIX: Prepare the base data map
     // We do NOT include 'outOfStockBranches' here for edits to avoid the race condition.
@@ -2704,7 +2916,9 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
       'name_ar': _nameArController.text.trim(),
       'description': _descController.text.trim(),
       'price': double.tryParse(_priceController.text) ?? 0.0,
-      'discountedPrice': (discountedPrice != null && discountedPrice > 0) ? discountedPrice : null,
+      'discountedPrice': (discountedPrice != null && discountedPrice > 0)
+          ? discountedPrice
+          : null,
       'imageUrl': _imageUrlController.text.trim(),
       'EstimatedTime': _estimatedTimeController.text.trim(),
       'sortOrder': int.tryParse(_sortOrderController.text) ?? 0,
@@ -2724,9 +2938,11 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
         // to the update map instead of overwriting the whole array.
         if (userScope.branchId != null) {
           if (_isOutOfStock) {
-            data['outOfStockBranches'] = FieldValue.arrayUnion([userScope.branchId]);
+            data['outOfStockBranches'] =
+                FieldValue.arrayUnion([userScope.branchId]);
           } else {
-            data['outOfStockBranches'] = FieldValue.arrayRemove([userScope.branchId]);
+            data['outOfStockBranches'] =
+                FieldValue.arrayRemove([userScope.branchId]);
           }
         }
 
@@ -2842,15 +3058,17 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
   }
 
   Future<String> _convertAndUploadImage(
-      String imagePath,
-      String storageFolder,
-      ) async {
+    String imagePath,
+    String storageFolder,
+  ) async {
     try {
       final File imageFile = File(imagePath);
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}_${imageFile.uri.pathSegments.last}';
+      final String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.uri.pathSegments.last}';
       final String storagePath = '$storageFolder/$fileName';
 
-      final Reference storageRef = FirebaseStorage.instance.ref().child(storagePath);
+      final Reference storageRef =
+          FirebaseStorage.instance.ref().child(storagePath);
       final UploadTask uploadTask = storageRef.putFile(imageFile);
 
       final TaskSnapshot snapshot = await uploadTask;
@@ -2931,8 +3149,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
   Widget _buildVariantField(Map<String, dynamic> variant, int index) {
     final nameController = TextEditingController(text: variant['name'] ?? '');
     final priceController = TextEditingController(
-        text: (variant['variantprice'] as num?)?.toStringAsFixed(2) ?? '0.00'
-    );
+        text: (variant['variantprice'] as num?)?.toStringAsFixed(2) ?? '0.00');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2944,7 +3161,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
           children: [
             Row(
               children: [
-                const Icon(Icons.label_outline, size: 20, color: Colors.deepPurple),
+                const Icon(Icons.label_outline,
+                    size: 20, color: Colors.deepPurple),
                 const SizedBox(width: 8),
                 Text(
                   'Variant ${index + 1}',
@@ -2955,7 +3173,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 18, color: Colors.red),
                   onPressed: () => _removeVariant(index),
                   tooltip: 'Remove Variant',
                 ),
@@ -3037,14 +3256,16 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
     );
   }
 
-  Widget _buildToggleRow(String title, bool value, IconData icon, Function(bool) onChanged) {
+  Widget _buildToggleRow(
+      String title, bool value, IconData icon, Function(bool) onChanged) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: SwitchListTile.adaptive(
         contentPadding: const EdgeInsets.symmetric(horizontal: 8),
         title: Row(
           children: [
-            Icon(icon, size: 20, color: value ? Colors.deepPurple : Colors.grey[600]),
+            Icon(icon,
+                size: 20, color: value ? Colors.deepPurple : Colors.grey[600]),
             const SizedBox(width: 8),
             Text(
               title,
@@ -3103,7 +3324,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildSectionHeader('Basic Information', Icons.info_outline),
+                    _buildSectionHeader(
+                        'Basic Information', Icons.info_outline),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _nameController,
@@ -3113,7 +3335,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                         filled: true,
                         fillColor: Colors.white,
                       ),
-                      validator: (val) => val!.isEmpty ? 'Name is required' : null,
+                      validator: (val) =>
+                          val!.isEmpty ? 'Name is required' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -3151,8 +3374,10 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                               fillColor: Colors.white,
                               prefixText: 'QAR ',
                             ),
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
-                            validator: (val) => val!.isEmpty ? 'Price is required' : null,
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            validator: (val) =>
+                                val!.isEmpty ? 'Price is required' : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -3167,7 +3392,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                               prefixText: 'QAR ',
                               helperText: 'Optional',
                             ),
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
                           ),
                         ),
                       ],
@@ -3210,7 +3436,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                     _CategoryDropdown(
                       selectedId: _selectedCategoryId,
                       userScope: userScope,
-                      onChanged: (id) => setState(() => _selectedCategoryId = id),
+                      onChanged: (id) =>
+                          setState(() => _selectedCategoryId = id),
                     ),
                     const SizedBox(height: 24),
                     _buildSectionHeader('Media', Icons.image),
@@ -3236,7 +3463,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                           ),
                         ),
                       ],
@@ -3257,7 +3485,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.business, color: Colors.deepPurple, size: 20),
+                                const Icon(Icons.business,
+                                    color: Colors.deepPurple, size: 20),
                                 const SizedBox(width: 8),
                                 const Text(
                                   'Select Branches',
@@ -3283,7 +3512,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.deepPurple,
                                 foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                                 minimumSize: const Size(double.infinity, 44),
                               ),
                               child: const Row(
@@ -3302,11 +3532,14 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                                 runSpacing: 8,
                                 children: _selectedBranchIds.map((branchId) {
                                   return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.deepPurple.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: Colors.deepPurple.withOpacity(0.3)),
+                                      border: Border.all(
+                                          color: Colors.deepPurple
+                                              .withOpacity(0.3)),
                                     ),
                                     child: Text(
                                       branchId,
@@ -3333,7 +3566,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.business, color: Colors.blue[600], size: 20),
+                            Icon(Icons.business,
+                                color: Colors.blue[600], size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -3403,22 +3637,39 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                       ),
                       child: Column(
                         children: [
-                          _buildToggleRow('Healthy Item', _isHealthy, Icons.fitness_center,
-                                  (val) => setState(() => _isHealthy = val)),
-                          _buildToggleRow('Spicy Item', _isSpicy, Icons.local_fire_department,
-                                  (val) => setState(() => _isSpicy = val)),
-                          _buildToggleRow('Popular Item', _isPopular, Icons.star,
-                                  (val) => setState(() => _isPopular = val)),
-                          _buildToggleRow('Available', _isAvailable, Icons.check_circle,
-                                  (val) => setState(() => _isAvailable = val)),
+                          _buildToggleRow(
+                              'Healthy Item',
+                              _isHealthy,
+                              Icons.fitness_center,
+                              (val) => setState(() => _isHealthy = val)),
+                          _buildToggleRow(
+                              'Spicy Item',
+                              _isSpicy,
+                              Icons.local_fire_department,
+                              (val) => setState(() => _isSpicy = val)),
+                          _buildToggleRow(
+                              'Popular Item',
+                              _isPopular,
+                              Icons.star,
+                              (val) => setState(() => _isPopular = val)),
+                          _buildToggleRow(
+                              'Available',
+                              _isAvailable,
+                              Icons.check_circle,
+                              (val) => setState(() => _isAvailable = val)),
                           Container(
                             margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _isOutOfStock ? Colors.orange[50] : Colors.grey[50],
+                              color: _isOutOfStock
+                                  ? Colors.orange[50]
+                                  : Colors.grey[50],
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _isOutOfStock ? Colors.orange : Colors.grey[300]!,
+                                color: _isOutOfStock
+                                    ? Colors.orange
+                                    : Colors.grey[300]!,
                               ),
                             ),
                             child: SwitchListTile.adaptive(
@@ -3427,19 +3678,24 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                                 children: [
                                   Icon(
                                     Icons.inventory_2,
-                                    color: _isOutOfStock ? Colors.orange : Colors.grey[600],
+                                    color: _isOutOfStock
+                                        ? Colors.orange
+                                        : Colors.grey[600],
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Out of Stock',
                                           style: TextStyle(
                                             fontWeight: FontWeight.w600,
-                                            color: _isOutOfStock ? Colors.orange : Colors.grey[800],
+                                            color: _isOutOfStock
+                                                ? Colors.orange
+                                                : Colors.grey[800],
                                           ),
                                         ),
                                         Text(
@@ -3448,7 +3704,9 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                                               : 'Item is available for order',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: _isOutOfStock ? Colors.orange[700] : Colors.grey[600],
+                                            color: _isOutOfStock
+                                                ? Colors.orange[700]
+                                                : Colors.grey[600],
                                           ),
                                         ),
                                       ],
@@ -3457,7 +3715,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                                 ],
                               ),
                               value: _isOutOfStock,
-                              onChanged: (val) => setState(() => _isOutOfStock = val),
+                              onChanged: (val) =>
+                                  setState(() => _isOutOfStock = val),
                               activeColor: Colors.orange,
                             ),
                           ),
@@ -3472,7 +3731,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.grey[700],
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -3497,13 +3757,14 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
                           : Text(_isEdit ? 'Update Item' : 'Add Item'),
                     ),
                   ),
@@ -3562,7 +3823,8 @@ class _CategoryDropdown extends StatelessWidget {
             fillColor: Colors.white,
           ),
           items: [
-            const DropdownMenuItem(value: null, child: Text('Select a category')),
+            const DropdownMenuItem(
+                value: null, child: Text('Select a category')),
             ...items,
           ],
           onChanged: onChanged,

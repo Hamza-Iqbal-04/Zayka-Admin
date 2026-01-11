@@ -9,6 +9,7 @@ import '../main.dart';
 import 'BranchManagement.dart';
 import 'OrdersScreen.dart';
 import '../Widgets/BranchFilterService.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class RidersScreen extends StatefulWidget {
   const RidersScreen({super.key});
@@ -326,6 +327,30 @@ class _RidersScreenState extends State<RidersScreen> {
 
         if (drivers.isEmpty) {
           return _buildEmptyState();
+        }
+
+        // ✅ RESPONSIVE UPDATE
+        if (ResponsiveHelper.isTablet(context) ||
+            ResponsiveHelper.isDesktop(context)) {
+          return GridView.builder(
+            padding: const EdgeInsets.all(20),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: ResponsiveHelper.isDesktop(context) ? 3 : 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.2, // Adjust as needed
+            ),
+            itemCount: drivers.length,
+            itemBuilder: (context, index) {
+              final driver = drivers[index];
+              return EnhancedDriverCard(
+                driver: driver,
+                onTap: () => _showDriverDetails(context, driver),
+                onEdit: () =>
+                    _showDriverDialog(context, userScope, driverDoc: driver),
+              );
+            },
+          );
         }
 
         return ListView.separated(

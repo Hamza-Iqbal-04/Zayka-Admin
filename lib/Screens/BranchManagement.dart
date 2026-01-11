@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../utils/responsive_helper.dart'; // ✅ Added
 
 class MultiBranchSelector extends StatefulWidget {
   final List<String> selectedIds;
@@ -45,7 +46,8 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
       }
     });
 
-    if (mounted) { // ADD THIS CHECK
+    if (mounted) {
+      // ADD THIS CHECK
       widget.onChanged(_selectedIds);
     }
   }
@@ -57,7 +59,8 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
       _selectedIds = branches.map((doc) => doc.id).toList();
     });
 
-    if (mounted) { // ADD THIS CHECK
+    if (mounted) {
+      // ADD THIS CHECK
       widget.onChanged(_selectedIds);
     }
   }
@@ -69,7 +72,8 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
       _selectedIds = [];
     });
 
-    if (mounted) { // ADD THIS CHECK
+    if (mounted) {
+      // ADD THIS CHECK
       widget.onChanged(_selectedIds);
     }
   }
@@ -130,7 +134,8 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
               // Header with selection count
               Row(
                 children: [
-                  const Icon(Icons.business, color: Colors.deepPurple, size: 20),
+                  const Icon(Icons.business,
+                      color: Colors.deepPurple, size: 20),
                   const SizedBox(width: 8),
                   const Text(
                     'Select Branches',
@@ -141,7 +146,8 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.deepPurple.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -203,12 +209,17 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
                       final isSelected = _selectedIds.contains(doc.id);
 
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isSelected ? Colors.deepPurple.withOpacity(0.05) : null,
+                          color: isSelected
+                              ? Colors.deepPurple.withOpacity(0.05)
+                              : null,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: isSelected ? Colors.deepPurple.withOpacity(0.3) : Colors.transparent,
+                            color: isSelected
+                                ? Colors.deepPurple.withOpacity(0.3)
+                                : Colors.transparent,
                           ),
                         ),
                         child: CheckboxListTile(
@@ -216,8 +227,12 @@ class _MultiBranchSelectorState extends State<MultiBranchSelector> {
                           title: Text(
                             branchName,
                             style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              color: isSelected ? Colors.deepPurple : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? Colors.deepPurple
+                                  : Colors.black87,
                             ),
                           ),
                           value: isSelected,
@@ -374,7 +389,8 @@ class _BranchManagementScreenState extends State<BranchManagementScreen> {
                         const SizedBox(height: 16),
                         Text(
                           'Error: ${snapshot.error}',
-                          style: const TextStyle(color: Colors.red, fontSize: 16),
+                          style:
+                              const TextStyle(color: Colors.red, fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -423,7 +439,8 @@ class _BranchManagementScreenState extends State<BranchManagementScreen> {
                   final address = data['address'] as Map? ?? {};
                   final city = (address['city'] ?? '').toString().toLowerCase();
 
-                  return name.contains(_searchQuery) || city.contains(_searchQuery);
+                  return name.contains(_searchQuery) ||
+                      city.contains(_searchQuery);
                 }).toList();
 
                 if (filteredDocs.isEmpty && _searchQuery.isNotEmpty) {
@@ -458,8 +475,55 @@ class _BranchManagementScreenState extends State<BranchManagementScreen> {
                   );
                 }
 
+                // ✅ RESPONSIVE BRANCH GRID
+                if (ResponsiveHelper.isTablet(context) ||
+                    ResponsiveHelper.isDesktop(context)) {
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(20),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount:
+                          ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.3,
+                    ),
+                    itemCount: filteredDocs.length,
+                    itemBuilder: (context, index) {
+                      final doc = filteredDocs[index];
+                      return _BranchCard(
+                        doc: doc,
+                        onEdit: () {
+                          final data = doc.data() as Map<String, dynamic>;
+                          showDialog(
+                            context: context,
+                            builder: (_) => BranchDialog(
+                              docId: doc.id,
+                              initialData: data,
+                            ),
+                          );
+                        },
+                        onDelete: () async {
+                          final shouldDelete = await _confirmDelete(context);
+                          if (shouldDelete) {
+                            await branchCollection.doc(doc.id).delete();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Branch deleted successfully.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      );
+                    },
+                  );
+                }
+
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   itemCount: filteredDocs.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
@@ -510,7 +574,8 @@ class _BranchManagementScreenState extends State<BranchManagementScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
             const SizedBox(width: 12),
-            const Text('Delete Branch?', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Delete Branch?',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
@@ -524,17 +589,20 @@ class _BranchManagementScreenState extends State<BranchManagementScreen> {
               foregroundColor: Colors.grey[600],
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w500)),
+            child: const Text('Cancel',
+                style: TextStyle(fontWeight: FontWeight.w500)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -567,8 +635,10 @@ class _BranchCard extends StatelessWidget {
     final logoUrl = data['logoUrl'] as String? ?? '';
     final estimatedTime = data['estimatedTime'] ?? '';
     final deliveryFee = (data['deliveryFee'] as num?)?.toDouble() ?? 0.0;
-    final freeDeliveryRange = (data['freeDeliveryRange'] as num?)?.toDouble() ?? 0.0;
-    final noDeliveryRange = (data['noDeliveryRange'] as num?)?.toDouble() ?? 0.0;
+    final freeDeliveryRange =
+        (data['freeDeliveryRange'] as num?)?.toDouble() ?? 0.0;
+    final noDeliveryRange =
+        (data['noDeliveryRange'] as num?)?.toDouble() ?? 0.0;
     final tables = data['Tables'] as Map? ?? {};
 
     return Container(
@@ -604,22 +674,23 @@ class _BranchCard extends StatelessWidget {
                     ),
                     child: logoUrl.isNotEmpty
                         ? ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        logoUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.business_rounded,
-                          color: Colors.deepPurple,
-                          size: 32,
-                        ),
-                      ),
-                    )
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                Icons.business_rounded,
+                                color: Colors.deepPurple,
+                                size: 32,
+                              ),
+                            ),
+                          )
                         : Icon(
-                      Icons.business_rounded,
-                      color: Colors.deepPurple,
-                      size: 32,
-                    ),
+                            Icons.business_rounded,
+                            color: Colors.deepPurple,
+                            size: 32,
+                          ),
                   ),
                   const SizedBox(width: 16),
                   // Branch Info
@@ -651,11 +722,13 @@ class _BranchCard extends StatelessWidget {
                                       .collection('Branch')
                                       .doc(doc.id)
                                       .update({
-                                        'isOpen': value,
-                                        'manuallyClosed': !value, // Set when closing
-                                        'manuallyOpened': value,   // Set when opening
-                                        'lastStatusUpdate': FieldValue.serverTimestamp(),
-                                      });
+                                    'isOpen': value,
+                                    'manuallyClosed':
+                                        !value, // Set when closing
+                                    'manuallyOpened': value, // Set when opening
+                                    'lastStatusUpdate':
+                                        FieldValue.serverTimestamp(),
+                                  });
 
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -711,7 +784,8 @@ class _BranchCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isOpen
                           ? Colors.green.withOpacity(0.1)
@@ -727,7 +801,9 @@ class _BranchCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isOpen ? Icons.radio_button_checked : Icons.radio_button_off,
+                          isOpen
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
                           size: 16,
                           color: isOpen ? Colors.green : Colors.red,
                         ),
@@ -746,7 +822,8 @@ class _BranchCard extends StatelessWidget {
                   const Spacer(),
                   if (tables.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -777,7 +854,9 @@ class _BranchCard extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Quick Info Row
-              if (estimatedTime.isNotEmpty || deliveryFee > 0 || freeDeliveryRange > 0)
+              if (estimatedTime.isNotEmpty ||
+                  deliveryFee > 0 ||
+                  freeDeliveryRange > 0)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -853,7 +932,8 @@ class _BranchCard extends StatelessWidget {
                       onPressed: () => _showBranchDetails(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.deepPurple,
-                        side: BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
+                        side: BorderSide(
+                            color: Colors.deepPurple.withOpacity(0.5)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -872,7 +952,8 @@ class _BranchCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -882,7 +963,8 @@ class _BranchCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.red),
                       onPressed: onDelete,
                       tooltip: 'Delete Branch',
                       padding: const EdgeInsets.all(12),
@@ -905,8 +987,10 @@ class _BranchCard extends StatelessWidget {
     final address = data['address'] as Map? ?? {};
     final estimatedTime = data['estimatedTime'] ?? 'Not set';
     final deliveryFee = (data['deliveryFee'] as num?)?.toDouble() ?? 0.0;
-    final freeDeliveryRange = (data['freeDeliveryRange'] as num?)?.toDouble() ?? 0.0;
-    final noDeliveryRange = (data['noDeliveryRange'] as num?)?.toDouble() ?? 0.0;
+    final freeDeliveryRange =
+        (data['freeDeliveryRange'] as num?)?.toDouble() ?? 0.0;
+    final noDeliveryRange =
+        (data['noDeliveryRange'] as num?)?.toDouble() ?? 0.0;
     final logoUrl = data['logoUrl'] as String? ?? '';
     final isOpen = data['isOpen'] ?? false;
     final offerCarousel = List.from(data['offer_carousel'] ?? []);
@@ -951,7 +1035,8 @@ class _BranchCard extends StatelessWidget {
             Expanded(
               child: Text(
                 name,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -972,34 +1057,47 @@ class _BranchCard extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 _buildDetailSection('Address', [
-                  _buildDetailRow(Icons.location_city_outlined, 'City', address['city'] ?? 'Not provided'),
-                  _buildDetailRow(Icons.location_city_outlined, 'City (Arabic)', address['city_ar'] ?? 'Not provided'), // Added Arabic
-                  _buildDetailRow(Icons.location_on_outlined, 'Street', address['street'] ?? 'Not provided'),
-                  _buildDetailRow(Icons.location_on_outlined, 'Street (Arabic)', address['street_ar'] ?? 'Not provided'), // Added Arabic
+                  _buildDetailRow(Icons.location_city_outlined, 'City',
+                      address['city'] ?? 'Not provided'),
+                  _buildDetailRow(Icons.location_city_outlined, 'City (Arabic)',
+                      address['city_ar'] ?? 'Not provided'), // Added Arabic
+                  _buildDetailRow(Icons.location_on_outlined, 'Street',
+                      address['street'] ?? 'Not provided'),
+                  _buildDetailRow(Icons.location_on_outlined, 'Street (Arabic)',
+                      address['street_ar'] ?? 'Not provided'), // Added Arabic
                 ]),
 
                 const SizedBox(height: 16),
 
                 _buildDetailSection('Business Details', [
-                  _buildDetailRow(Icons.timer_outlined, 'Estimated Time', estimatedTime),
-                  _buildDetailRow(Icons.delivery_dining_outlined, 'Delivery Fee', 'QAR ${deliveryFee.toStringAsFixed(2)}'),
+                  _buildDetailRow(
+                      Icons.timer_outlined, 'Estimated Time', estimatedTime),
+                  _buildDetailRow(Icons.delivery_dining_outlined,
+                      'Delivery Fee', 'QAR ${deliveryFee.toStringAsFixed(2)}'),
                   _buildDetailRow(
                     Icons.local_shipping_outlined,
                     'Free Delivery Range',
-                    freeDeliveryRange > 0 ? '${freeDeliveryRange.toStringAsFixed(1)} km' : 'Not set',
+                    freeDeliveryRange > 0
+                        ? '${freeDeliveryRange.toStringAsFixed(1)} km'
+                        : 'Not set',
                   ),
                   _buildDetailRow(
                     Icons.do_not_disturb_outlined,
                     'No Delivery Range',
-                    noDeliveryRange > 0 ? '${noDeliveryRange.toStringAsFixed(1)} km' : 'Not set',
+                    noDeliveryRange > 0
+                        ? '${noDeliveryRange.toStringAsFixed(1)} km'
+                        : 'Not set',
                   ),
                   _buildDetailRow(
-                    isOpen ? Icons.radio_button_checked : Icons.radio_button_off,
+                    isOpen
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
                     'Status',
                     isOpen ? 'Open' : 'Closed',
                     color: isOpen ? Colors.green : Colors.red,
                   ),
-                  _buildDetailRow(Icons.table_restaurant_outlined, 'Tables', '${tables.length} configured'),
+                  _buildDetailRow(Icons.table_restaurant_outlined, 'Tables',
+                      '${tables.length} configured'),
                 ]),
 
                 // AFTER
@@ -1019,7 +1117,8 @@ class _BranchCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
-                        height: 150, // Or any height you prefer for the carousel
+                        height:
+                            150, // Or any height you prefer for the carousel
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: offerCarousel.length,
@@ -1031,10 +1130,12 @@ class _BranchCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12.0),
                                 child: Image.network(
                                   imageUrl,
-                                  width: 250, // Width for each image in the carousel
+                                  width:
+                                      250, // Width for each image in the carousel
                                   fit: BoxFit.cover,
                                   // Shows a loading indicator while the image loads
-                                  loadingBuilder: (context, child, loadingProgress) {
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
                                     if (loadingProgress == null) return child;
                                     return Container(
                                       width: 250,
@@ -1042,9 +1143,13 @@ class _BranchCard extends StatelessWidget {
                                       child: Center(
                                         child: CircularProgressIndicator(
                                           color: Colors.deepPurple,
-                                          value: loadingProgress.expectedTotalBytes != null
-                                              ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
+                                          value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
                                               : null,
                                         ),
                                       ),
@@ -1056,11 +1161,15 @@ class _BranchCard extends StatelessWidget {
                                       width: 250,
                                       color: Colors.grey[200],
                                       child: const Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                                          Icon(Icons.broken_image,
+                                              color: Colors.grey, size: 40),
                                           SizedBox(height: 4),
-                                          Text('Image failed', style: TextStyle(color: Colors.grey)),
+                                          Text('Image failed',
+                                              style: TextStyle(
+                                                  color: Colors.grey)),
                                         ],
                                       ),
                                     );
@@ -1117,7 +1226,8 @@ class _BranchCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? color}) {
+  Widget _buildDetailRow(IconData icon, String label, String value,
+      {Color? color}) {
     // This helper function also needs to be updated to show Arabic in detail view if it was passed.
     // However, since the branch address fetching logic is outside this file, we can leave this as-is
     // since the Arabic fields are now added to the DB and will be available for the receipt (OrdersScreen.dart).
@@ -1151,7 +1261,8 @@ class _BranchCard extends StatelessWidget {
 class BranchDialog extends StatefulWidget {
   final String? docId;
   final Map? initialData;
-  const BranchDialog({this.docId, this.initialData, Key? key}) : super(key: key);
+  const BranchDialog({this.docId, this.initialData, Key? key})
+      : super(key: key);
 
   @override
   State<BranchDialog> createState() => _BranchDialogState();
@@ -1159,9 +1270,15 @@ class BranchDialog extends StatefulWidget {
 
 class _BranchDialogState extends State<BranchDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameCtrl, _emailCtrl, _phoneCtrl, _estimatedTimeCtrl, _logoUrlCtrl, _deliveryFeeCtrl;
+  late TextEditingController _nameCtrl,
+      _emailCtrl,
+      _phoneCtrl,
+      _estimatedTimeCtrl,
+      _logoUrlCtrl,
+      _deliveryFeeCtrl;
   late TextEditingController _cityCtrl, _streetCtrl, _latCtrl, _lngCtrl;
-  late TextEditingController _cityArCtrl, _streetArCtrl; // <-- ADDED ARABIC CONTROLLERS
+  late TextEditingController _cityArCtrl,
+      _streetArCtrl; // <-- ADDED ARABIC CONTROLLERS
   late TextEditingController _freeDeliveryRangeCtrl, _noDeliveryRangeCtrl;
   late List<String> _offerCarousel;
   bool _isOpen = true;
@@ -1185,11 +1302,15 @@ class _BranchDialogState extends State<BranchDialog> {
     _nameCtrl = TextEditingController(text: data['name'] ?? '');
     _emailCtrl = TextEditingController(text: data['email'] ?? '');
     _phoneCtrl = TextEditingController(text: data['phone']?.toString() ?? '');
-    _estimatedTimeCtrl = TextEditingController(text: data['estimatedTime'] ?? '');
+    _estimatedTimeCtrl =
+        TextEditingController(text: data['estimatedTime'] ?? '');
     _logoUrlCtrl = TextEditingController(text: data['logoUrl'] ?? '');
-    _deliveryFeeCtrl = TextEditingController(text: (data['deliveryFee'] as num?)?.toString() ?? '0');
-    _freeDeliveryRangeCtrl = TextEditingController(text: (data['freeDeliveryRange'] as num?)?.toString() ?? '0');
-    _noDeliveryRangeCtrl = TextEditingController(text: (data['noDeliveryRange'] as num?)?.toString() ?? '0');
+    _deliveryFeeCtrl = TextEditingController(
+        text: (data['deliveryFee'] as num?)?.toString() ?? '0');
+    _freeDeliveryRangeCtrl = TextEditingController(
+        text: (data['freeDeliveryRange'] as num?)?.toString() ?? '0');
+    _noDeliveryRangeCtrl = TextEditingController(
+        text: (data['noDeliveryRange'] as num?)?.toString() ?? '0');
 
     final address = data['address'] as Map<String, dynamic>? ?? {};
     _cityCtrl = TextEditingController(text: address['city'] ?? '');
@@ -1209,8 +1330,10 @@ class _BranchDialogState extends State<BranchDialog> {
       _initializeMapToCurrentUserLocation();
     }
 
-    _latCtrl = TextEditingController(text: selectedGeoPoint?.latitude.toString() ?? '0');
-    _lngCtrl = TextEditingController(text: selectedGeoPoint?.longitude.toString() ?? '0');
+    _latCtrl = TextEditingController(
+        text: selectedGeoPoint?.latitude.toString() ?? '0');
+    _lngCtrl = TextEditingController(
+        text: selectedGeoPoint?.longitude.toString() ?? '0');
 
     _offerCarousel = List<String>.from(data['offer_carousel'] ?? []);
     _isOpen = data['isOpen'] ?? true;
@@ -1232,7 +1355,8 @@ class _BranchDialogState extends State<BranchDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          initialCenter = LatLng(25.276987, 51.52002); // Default location (Doha)
+          initialCenter =
+              LatLng(25.276987, 51.52002); // Default location (Doha)
           isMapLoading = false;
         });
       }
@@ -1279,7 +1403,8 @@ class _BranchDialogState extends State<BranchDialog> {
         final address = data['address'];
         setState(() {
           _streetCtrl.text = address['road'] ?? data['display_name'] ?? '';
-          _cityCtrl.text = address['city'] ?? address['town'] ?? address['village'] ?? '';
+          _cityCtrl.text =
+              address['city'] ?? address['town'] ?? address['village'] ?? '';
 
           // NOTE: Nominatim doesn't provide automatic Arabic reverse geocoding here,
           // so these fields will need to be manually entered by the user or
@@ -1291,7 +1416,6 @@ class _BranchDialogState extends State<BranchDialog> {
       // Fail silently
     }
   }
-
 
   Future<void> forwardGeocode(String query) async {
     if (query.isEmpty) return;
@@ -1325,7 +1449,6 @@ class _BranchDialogState extends State<BranchDialog> {
       // Fail silently
     }
   }
-
 
   @override
   void dispose() {
@@ -1361,18 +1484,31 @@ class _BranchDialogState extends State<BranchDialog> {
       final name = _nameCtrl.text.trim();
       final newDocId = name.replaceAll(RegExp(r'\s+'), '_');
       final isEdit = widget.docId != null;
-      final docRef = FirebaseFirestore.instance.collection('Branch').doc(isEdit ? widget.docId : newDocId);
+      final docRef = FirebaseFirestore.instance
+          .collection('Branch')
+          .doc(isEdit ? widget.docId : newDocId);
 
       if (isEdit && newDocId != widget.docId) {
-        final exists = await FirebaseFirestore.instance.collection('Branch').doc(newDocId).get();
+        final exists = await FirebaseFirestore.instance
+            .collection('Branch')
+            .doc(newDocId)
+            .get();
         if (exists.exists) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Branch name already exists.')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Branch name already exists.')));
           }
           return;
         }
-        await docRef.set(await FirebaseFirestore.instance.collection('Branch').doc(widget.docId!).get().then((doc) => doc.data() ?? {}));
-        await FirebaseFirestore.instance.collection('Branch').doc(widget.docId!).delete();
+        await docRef.set(await FirebaseFirestore.instance
+            .collection('Branch')
+            .doc(widget.docId!)
+            .get()
+            .then((doc) => doc.data() ?? {}));
+        await FirebaseFirestore.instance
+            .collection('Branch')
+            .doc(widget.docId!)
+            .delete();
       }
 
       await docRef.set({
@@ -1390,7 +1526,8 @@ class _BranchDialogState extends State<BranchDialog> {
           'street': _streetCtrl.text.trim(),
           'city_ar': _cityArCtrl.text.trim(), // <-- SAVING ARABIC CITY
           'street_ar': _streetArCtrl.text.trim(), // <-- SAVING ARABIC STREET
-          'geolocation': GeoPoint(double.tryParse(_latCtrl.text) ?? 0, double.tryParse(_lngCtrl.text) ?? 0),
+          'geolocation': GeoPoint(double.tryParse(_latCtrl.text) ?? 0,
+              double.tryParse(_lngCtrl.text) ?? 0),
         },
         'offer_carousel': _offerCarousel,
         'Tables': {},
@@ -1399,7 +1536,8 @@ class _BranchDialogState extends State<BranchDialog> {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Branch "$name" ${isEdit ? 'updated' : 'added'} successfully!'),
+          content: Text(
+              'Branch "$name" ${isEdit ? 'updated' : 'added'} successfully!'),
           backgroundColor: Colors.green,
         ));
       }
@@ -1436,10 +1574,16 @@ class _BranchDialogState extends State<BranchDialog> {
       }
 
       final Uint8List imageBytes = await image.readAsBytes();
-      final Uint8List webpBytes = await FlutterImageCompress.compressWithList(imageBytes, minHeight: 1080, minWidth: 1080, quality: 80, format: CompressFormat.webp);
+      final Uint8List webpBytes = await FlutterImageCompress.compressWithList(
+          imageBytes,
+          minHeight: 1080,
+          minWidth: 1080,
+          quality: 80,
+          format: CompressFormat.webp);
       String fileName = 'promo_ ${DateTime.now().millisecondsSinceEpoch}.webp';
 
-      Reference storageRef = FirebaseStorage.instance.ref().child('promotions/ $fileName');
+      Reference storageRef =
+          FirebaseStorage.instance.ref().child('promotions/ $fileName');
       UploadTask uploadTask = storageRef.putData(webpBytes);
       TaskSnapshot taskSnapshot = await uploadTask;
       String downloadUrl = await taskSnapshot.ref.getDownloadURL();
@@ -1449,14 +1593,18 @@ class _BranchDialogState extends State<BranchDialog> {
         _isUploading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Offer image added successfully as WebP!'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Offer image added successfully as WebP!'),
+            backgroundColor: Colors.green));
       }
     } catch (e) {
       setState(() {
         _isUploading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to upload image: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to upload image: $e'),
+            backgroundColor: Colors.red));
       }
     }
   }
@@ -1466,11 +1614,15 @@ class _BranchDialogState extends State<BranchDialog> {
       Reference storageRef = FirebaseStorage.instance.refFromURL(imageUrl);
       await storageRef.delete();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image successfully deleted from storage.'), backgroundColor: Colors.orange));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Image successfully deleted from storage.'),
+            backgroundColor: Colors.orange));
       }
     } on FirebaseException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete image: ${e.message}'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Failed to delete image: ${e.message}'),
+            backgroundColor: Colors.red));
       }
     }
   }
@@ -1482,7 +1634,9 @@ class _BranchDialogState extends State<BranchDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.95, maxWidth: MediaQuery.of(context).size.width * 0.95),
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.95,
+            maxWidth: MediaQuery.of(context).size.width * 0.95),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -1493,8 +1647,14 @@ class _BranchDialogState extends State<BranchDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(isEdit ? 'Edit Branch' : 'Add New Branch', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  Text(isEdit ? 'Edit Branch' : 'Add New Branch',
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple)),
+                  IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context)),
                 ],
               ),
               const Divider(),
@@ -1509,30 +1669,44 @@ class _BranchDialogState extends State<BranchDialog> {
                         // Basic Information Card
                         Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Basic Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                                const Text('Basic Information',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.deepPurple)),
                                 const SizedBox(height: 12),
                                 TextFormField(
                                   controller: _nameCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Branch Name *',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.business_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.business_outlined,
+                                        color: Colors.deepPurple),
                                   ),
-                                  validator: (v) => v?.isEmpty ?? true ? 'Branch name is required' : null,
+                                  validator: (v) => v?.isEmpty ?? true
+                                      ? 'Branch name is required'
+                                      : null,
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
                                   controller: _emailCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Email',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.email_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(Icons.email_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                   keyboardType: TextInputType.emailAddress,
                                 ),
@@ -1541,8 +1715,11 @@ class _BranchDialogState extends State<BranchDialog> {
                                   controller: _phoneCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Phone',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.phone_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(Icons.phone_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                   keyboardType: TextInputType.phone,
                                 ),
@@ -1554,20 +1731,28 @@ class _BranchDialogState extends State<BranchDialog> {
                         // Business Details Card
                         Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Business Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                                const Text('Business Details',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.deepPurple)),
                                 const SizedBox(height: 12),
                                 TextFormField(
                                   controller: _estimatedTimeCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Estimated Time (minutes)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.timer_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(Icons.timer_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -1575,8 +1760,11 @@ class _BranchDialogState extends State<BranchDialog> {
                                   controller: _deliveryFeeCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Delivery Fee',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.attach_money, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(Icons.attach_money,
+                                        color: Colors.deepPurple),
                                   ),
                                   keyboardType: TextInputType.number,
                                 ),
@@ -1587,8 +1775,12 @@ class _BranchDialogState extends State<BranchDialog> {
                                   decoration: InputDecoration(
                                     labelText: 'Free Delivery Range (km)',
                                     hintText: 'e.g., 10',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.local_shipping_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.local_shipping_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                   keyboardType: TextInputType.number,
                                   validator: (value) {
@@ -1608,8 +1800,12 @@ class _BranchDialogState extends State<BranchDialog> {
                                   decoration: InputDecoration(
                                     labelText: 'No Delivery Range (km)',
                                     hintText: 'e.g., 15',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.do_not_disturb_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.do_not_disturb_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                   keyboardType: TextInputType.number,
                                   validator: (value) {
@@ -1619,7 +1815,9 @@ class _BranchDialogState extends State<BranchDialog> {
                                         return 'Please enter a valid positive number';
                                       }
                                       // Validate that noDeliveryRange is greater than freeDeliveryRange
-                                      final freeRange = double.tryParse(_freeDeliveryRangeCtrl.text) ?? 0;
+                                      final freeRange = double.tryParse(
+                                              _freeDeliveryRangeCtrl.text) ??
+                                          0;
                                       if (numValue <= freeRange) {
                                         return 'No delivery range must be greater than free delivery range';
                                       }
@@ -1632,8 +1830,11 @@ class _BranchDialogState extends State<BranchDialog> {
                                   controller: _logoUrlCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Logo URL',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.image_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(Icons.image_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                               ],
@@ -1644,31 +1845,45 @@ class _BranchDialogState extends State<BranchDialog> {
                         // Address Card with Map
                         Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Address Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                                const Text('Address Information',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.deepPurple)),
                                 const SizedBox(height: 12),
                                 TextFormField(
                                   controller: _cityCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'City (English)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.location_city_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
-                                  controller: _cityArCtrl, // <-- ADDED ARABIC CITY FIELD
+                                  controller:
+                                      _cityArCtrl, // <-- ADDED ARABIC CITY FIELD
                                   textDirection: TextDirection.rtl,
                                   textAlign: TextAlign.right,
                                   decoration: InputDecoration(
                                     labelText: 'City (Arabic)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.location_city_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.location_city_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -1676,33 +1891,49 @@ class _BranchDialogState extends State<BranchDialog> {
                                   controller: _streetCtrl,
                                   decoration: InputDecoration(
                                     labelText: 'Street (English)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.location_on_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.location_on_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
-                                  controller: _streetArCtrl, // <-- ADDED ARABIC STREET FIELD
+                                  controller:
+                                      _streetArCtrl, // <-- ADDED ARABIC STREET FIELD
                                   textDirection: TextDirection.rtl,
                                   textAlign: TextAlign.right,
                                   decoration: InputDecoration(
                                     labelText: 'Street (Arabic)',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
-                                    prefixIcon: const Icon(Icons.location_on_outlined, color: Colors.deepPurple),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12.0)),
+                                    prefixIcon: const Icon(
+                                        Icons.location_on_outlined,
+                                        color: Colors.deepPurple),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Location on Map', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.deepPurple)),
+                                    Text('Location on Map',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.deepPurple)),
                                     const SizedBox(height: 8),
                                     TextFormField(
                                       controller: searchController,
                                       decoration: InputDecoration(
                                         labelText: 'Search for a location',
-                                        prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0)),
+                                        prefixIcon: const Icon(Icons.search,
+                                            color: Colors.deepPurple),
+                                        border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12.0)),
                                       ),
                                       onFieldSubmitted: (value) {
                                         forwardGeocode(value);
@@ -1712,49 +1943,75 @@ class _BranchDialogState extends State<BranchDialog> {
                                     SizedBox(
                                       height: 250,
                                       child: isMapLoading
-                                          ? Center(child: CircularProgressIndicator(color: Colors.deepPurple))
+                                          ? Center(
+                                              child: CircularProgressIndicator(
+                                                  color: Colors.deepPurple))
                                           : ClipRRect(
-                                        borderRadius: BorderRadius.circular(12.0),
-                                        child: FlutterMap(
-                                          mapController: mapController,
-                                          options: MapOptions(
-                                            center: initialCenter ?? LatLng(0, 0),
-                                            zoom: 15.0,
-                                            onTap: (tapPosition, point) {
-                                              setState(() {
-                                                selectedGeoPoint = GeoPoint(point.latitude, point.longitude);
-                                                _latCtrl.text = point.latitude.toString();
-                                                _lngCtrl.text = point.longitude.toString();
+                                              borderRadius:
+                                                  BorderRadius.circular(12.0),
+                                              child: FlutterMap(
+                                                mapController: mapController,
+                                                options: MapOptions(
+                                                  center: initialCenter ??
+                                                      LatLng(0, 0),
+                                                  zoom: 15.0,
+                                                  onTap: (tapPosition, point) {
+                                                    setState(() {
+                                                      selectedGeoPoint =
+                                                          GeoPoint(
+                                                              point.latitude,
+                                                              point.longitude);
+                                                      _latCtrl.text = point
+                                                          .latitude
+                                                          .toString();
+                                                      _lngCtrl.text = point
+                                                          .longitude
+                                                          .toString();
 
-                                                // Clear Arabic fields on map interaction, as reverse geocoding only provides English.
-                                                _cityArCtrl.clear();
-                                                _streetArCtrl.clear();
-                                              });
-                                              reverseGeocode(point);
-                                            },
-                                          ),
-                                          children: [
-                                            TileLayer(
-                                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                              userAgentPackageName: 'com.example.mdd',
-                                            ),
-                                            if (selectedGeoPoint != null)
-                                              MarkerLayer(
-                                                markers: [
-                                                  Marker(
-                                                    point: LatLng(selectedGeoPoint!.latitude, selectedGeoPoint!.longitude),
-                                                    width: 80,
-                                                    height: 80,
-                                                    child: const Icon(Icons.location_pin, color: Colors.red, size: 40), // Use 'child' instead of 'builder'
+                                                      // Clear Arabic fields on map interaction, as reverse geocoding only provides English.
+                                                      _cityArCtrl.clear();
+                                                      _streetArCtrl.clear();
+                                                    });
+                                                    reverseGeocode(point);
+                                                  },
+                                                ),
+                                                children: [
+                                                  TileLayer(
+                                                    urlTemplate:
+                                                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                                    userAgentPackageName:
+                                                        'com.example.mdd',
                                                   ),
+                                                  if (selectedGeoPoint != null)
+                                                    MarkerLayer(
+                                                      markers: [
+                                                        Marker(
+                                                          point: LatLng(
+                                                              selectedGeoPoint!
+                                                                  .latitude,
+                                                              selectedGeoPoint!
+                                                                  .longitude),
+                                                          width: 80,
+                                                          height: 80,
+                                                          child: const Icon(
+                                                              Icons
+                                                                  .location_pin,
+                                                              color: Colors.red,
+                                                              size:
+                                                                  40), // Use 'child' instead of 'builder'
+                                                        ),
+                                                      ],
+                                                    ),
                                                 ],
                                               ),
-                                          ],
-                                        ),
-                                      ),
+                                            ),
                                     ),
                                     const SizedBox(height: 8),
-                                    Text('Tap on the map to select the exact location.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                    Text(
+                                        'Tap on the map to select the exact location.',
+                                        style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 12)),
                                     const SizedBox(height: 16),
                                     // Row(
                                     //   children: [
@@ -1793,24 +2050,36 @@ class _BranchDialogState extends State<BranchDialog> {
                         // Offers Card
                         Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Offer Carousel', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                                    const Text('Offer Carousel',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.deepPurple)),
                                     _isUploading
-                                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.deepPurple))
+                                        ? const SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                color: Colors.deepPurple))
                                         : IconButton(
-                                      icon: const Icon(Icons.add_photo_alternate_outlined),
-                                      color: Colors.deepPurple,
-                                      onPressed: pickAndUploadImage,
-                                      tooltip: 'Add Offer Image',
-                                    ),
+                                            icon: const Icon(Icons
+                                                .add_photo_alternate_outlined),
+                                            color: Colors.deepPurple,
+                                            onPressed: pickAndUploadImage,
+                                            tooltip: 'Add Offer Image',
+                                          ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -1818,7 +2087,8 @@ class _BranchDialogState extends State<BranchDialog> {
                                   const Center(
                                     child: Padding(
                                       padding: EdgeInsets.all(16.0),
-                                      child: Text('No offers added yet.', style: TextStyle(color: Colors.grey)),
+                                      child: Text('No offers added yet.',
+                                          style: TextStyle(color: Colors.grey)),
                                     ),
                                   )
                                 else
@@ -1827,16 +2097,22 @@ class _BranchDialogState extends State<BranchDialog> {
                                     runSpacing: 8,
                                     children: _offerCarousel.map((url) {
                                       return Chip(
-                                        avatar: CircleAvatar(backgroundImage: NetworkImage(url), backgroundColor: Colors.grey.shade200),
-                                        label: const Text('Image', overflow: TextOverflow.ellipsis),
-                                        deleteIcon: const Icon(Icons.close, size: 18),
+                                        avatar: CircleAvatar(
+                                            backgroundImage: NetworkImage(url),
+                                            backgroundColor:
+                                                Colors.grey.shade200),
+                                        label: const Text('Image',
+                                            overflow: TextOverflow.ellipsis),
+                                        deleteIcon:
+                                            const Icon(Icons.close, size: 18),
                                         onDeleted: () async {
                                           await deleteImageFromStorage(url);
                                           setState(() {
                                             _offerCarousel.remove(url);
                                           });
                                         },
-                                        backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                                        backgroundColor:
+                                            Colors.deepPurple.withOpacity(0.1),
                                         deleteIconColor: Colors.deepPurple,
                                       );
                                     }).toList(),
@@ -1849,23 +2125,37 @@ class _BranchDialogState extends State<BranchDialog> {
                         // Status Card
                         Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Branch Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                                const Text('Branch Status',
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.deepPurple)),
                                 const SizedBox(height: 12),
                                 SwitchListTile(
                                   title: const Text('Is Open'),
-                                  subtitle: Text(_isOpen ? 'Branch is currently open' : 'Branch is currently closed'),
+                                  subtitle: Text(_isOpen
+                                      ? 'Branch is currently open'
+                                      : 'Branch is currently closed'),
                                   value: _isOpen,
-                                  onChanged: (value) => setState(() => _isOpen = value),
+                                  onChanged: (value) =>
+                                      setState(() => _isOpen = value),
                                   activeColor: Colors.green,
-                                  inactiveTrackColor: Colors.red.withOpacity(0.5),
+                                  inactiveTrackColor:
+                                      Colors.red.withOpacity(0.5),
                                   inactiveThumbColor: Colors.red,
-                                  secondary: Icon(_isOpen ? Icons.radio_button_checked : Icons.radio_button_off, color: _isOpen ? Colors.green : Colors.red),
+                                  secondary: Icon(
+                                      _isOpen
+                                          ? Icons.radio_button_checked
+                                          : Icons.radio_button_off,
+                                      color:
+                                          _isOpen ? Colors.green : Colors.red),
                                 ),
                               ],
                             ),
@@ -1883,19 +2173,38 @@ class _BranchDialogState extends State<BranchDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), side: const BorderSide(color: Colors.deepPurple)),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+                      onPressed:
+                          _isLoading ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          side: const BorderSide(color: Colors.deepPurple)),
+                      child: const Text('Cancel',
+                          style: TextStyle(
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveBranch,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
                       child: _isLoading
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(isEdit ? 'Update Branch' : 'Add Branch', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : Text(isEdit ? 'Update Branch' : 'Add Branch',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

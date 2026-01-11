@@ -16,7 +16,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
   bool _hasError = false;
   String? _errorMessage;
   Map<String, dynamic> _workingHours = {};
-  Map<String, dynamic> _originalWorkingHours = {}; // Track original for unsaved changes
+  Map<String, dynamic> _originalWorkingHours =
+      {}; // Track original for unsaved changes
 
   // SuperAdmin branch selection
   String? _selectedBranchId;
@@ -25,7 +26,13 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
   // Ordered list of days
   final List<String> _days = [
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday'
   ];
 
   // Track if user made changes
@@ -43,7 +50,7 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
   Future<void> _initializeScreen() async {
     final userScope = context.read<UserScopeService>();
-    
+
     // Wait for userScope to load if needed
     if (!userScope.isLoaded) {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -82,10 +89,13 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
     try {
       final List<Map<String, dynamic>> loadedBranches = [];
-      
+
       for (final branchId in branchIds) {
         try {
-          final doc = await FirebaseFirestore.instance.collection('Branch').doc(branchId).get();
+          final doc = await FirebaseFirestore.instance
+              .collection('Branch')
+              .doc(branchId)
+              .get();
           if (doc.exists) {
             final data = doc.data()!;
             loadedBranches.add({
@@ -97,14 +107,15 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
           debugPrint('Error loading branch $branchId: $e');
         }
       }
-      
+
       if (!mounted) return;
 
       if (loadedBranches.isEmpty) {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = 'Could not load any branches. Please check your connection.';
+          _errorMessage =
+              'Could not load any branches. Please check your connection.';
         });
         return;
       }
@@ -151,12 +162,12 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
       if (!mounted) return;
 
       if (doc.exists && doc.data()!.containsKey('workingHours')) {
-        final loadedHours = Map<String, dynamic>.from(doc.data()!['workingHours']);
+        final loadedHours =
+            Map<String, dynamic>.from(doc.data()!['workingHours']);
         setState(() {
           _workingHours = loadedHours;
-          _originalWorkingHours = Map<String, dynamic>.from(
-            loadedHours.map((key, value) => MapEntry(key, Map<String, dynamic>.from(value)))
-          );
+          _originalWorkingHours = Map<String, dynamic>.from(loadedHours.map(
+              (key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
           _isLoading = false;
         });
       } else {
@@ -168,7 +179,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = 'Failed to load timings. Please check your connection.';
+          _errorMessage =
+              'Failed to load timings. Please check your connection.';
         });
       }
     }
@@ -186,9 +198,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
     }
     setState(() {
       _workingHours = defaultHours;
-      _originalWorkingHours = Map<String, dynamic>.from(
-        defaultHours.map((key, value) => MapEntry(key, Map<String, dynamic>.from(value)))
-      );
+      _originalWorkingHours = Map<String, dynamic>.from(defaultHours.map(
+          (key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
       _isLoading = false;
     });
   }
@@ -268,7 +279,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
             const Text('Unsaved Changes'),
           ],
         ),
-        content: const Text('You have unsaved changes. Are you sure you want to leave without saving?'),
+        content: const Text(
+            'You have unsaved changes. Are you sure you want to leave without saving?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -288,7 +300,9 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
   Future<void> _saveTimings() async {
     if (_selectedBranchId == null || _selectedBranchId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Error: No Branch selected'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('❌ Error: No Branch selected'),
+            backgroundColor: Colors.red),
       );
       return;
     }
@@ -297,13 +311,13 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
     if (!_validateAllSlots()) return;
 
     setState(() => _isSaving = true);
-    
+
     try {
       await FirebaseFirestore.instance
           .collection('Branch')
           .doc(_selectedBranchId)
-          .set({'workingHours': _workingHours}, SetOptions(merge: true))
-          .timeout(const Duration(seconds: 15));
+          .set({'workingHours': _workingHours},
+              SetOptions(merge: true)).timeout(const Duration(seconds: 15));
 
       if (mounted) {
         final branchName = _allBranches.firstWhere(
@@ -312,9 +326,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         )['name'];
 
         // Update original to match saved state
-        _originalWorkingHours = Map<String, dynamic>.from(
-          _workingHours.map((key, value) => MapEntry(key, Map<String, dynamic>.from(value)))
-        );
+        _originalWorkingHours = Map<String, dynamic>.from(_workingHours.map(
+            (key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -328,7 +341,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Error saving: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('❌ Error saving: $e'), backgroundColor: Colors.red),
         );
         setState(() => _isSaving = false);
       }
@@ -344,7 +358,9 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         content: const Text(
             'This will overwrite all other days with Monday\'s schedule. Are you sure?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -354,7 +370,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                     if (day != 'monday') {
                       _workingHours[day] = {
                         'isOpen': mondayData['isOpen'] ?? true,
-                        'slots': List.from((mondayData['slots'] as List? ?? []).map((s) => Map.from(s))),
+                        'slots': List.from((mondayData['slots'] as List? ?? [])
+                            .map((s) => Map.from(s))),
                       };
                     }
                   }
@@ -362,7 +379,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Applied Monday\'s schedule to all days')),
+                const SnackBar(
+                    content: Text('Applied Monday\'s schedule to all days')),
               );
             },
             child: const Text('Apply'),
@@ -374,7 +392,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
   // --- Time Management ---
 
-  Future<void> _pickTime(String day, int index, String key, String currentTime) async {
+  Future<void> _pickTime(
+      String day, int index, String key, String currentTime) async {
     TimeOfDay initial = _parseTime(currentTime);
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -397,7 +416,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
       final currentSlot = _workingHours[day]['slots'][index];
       String openTime = key == 'open' ? formattedPicked : currentSlot['open'];
-      String closeTime = key == 'close' ? formattedPicked : currentSlot['close'];
+      String closeTime =
+          key == 'close' ? formattedPicked : currentSlot['close'];
 
       setState(() {
         _workingHours[day]['slots'][index][key] = formattedPicked;
@@ -459,7 +479,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
     if (slots.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('At least one slot is required. Turn off the day instead.'),
+          content:
+              Text('At least one slot is required. Turn off the day instead.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -489,7 +510,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
           title: const Text('Restaurant Timings',
-              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: Colors.black87, fontWeight: FontWeight.bold)),
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -513,9 +535,12 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                 onPressed: _isSaving ? null : _saveTimings,
                 icon: _isSaving
                     ? const SizedBox(
-                        width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))
-                    : Icon(Icons.check_circle, color: _hasUnsavedChanges ? Colors.green : Colors.grey),
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.green))
+                    : Icon(Icons.check_circle,
+                        color: _hasUnsavedChanges ? Colors.green : Colors.grey),
                 label: Text(
                   _isSaving ? 'Saving...' : 'Save',
                   style: TextStyle(
@@ -527,7 +552,12 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: _buildBody(),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: _buildBody(),
+          ),
+        ),
       ),
     );
   }
@@ -593,7 +623,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'You have unsaved changes',
-                    style: TextStyle(color: Colors.orange[700], fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        color: Colors.orange[700], fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -647,7 +678,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                 child: DropdownButton<String>(
                   value: _selectedBranchId,
                   isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down, color: Colors.indigo),
+                  icon: const Icon(Icons.keyboard_arrow_down,
+                      color: Colors.indigo),
                   items: _allBranches.map((branch) {
                     return DropdownMenuItem<String>(
                       value: branch['id'],
@@ -658,15 +690,17 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                     );
                   }).toList(),
                   onChanged: (String? newValue) async {
-                    if (newValue == null || newValue == _selectedBranchId) return;
-                    
+                    if (newValue == null || newValue == _selectedBranchId)
+                      return;
+
                     // Check for unsaved changes before switching
                     if (_hasUnsavedChanges) {
                       final shouldSwitch = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
                           title: const Text('Unsaved Changes'),
-                          content: const Text('You have unsaved changes. Switching branches will discard them.'),
+                          content: const Text(
+                              'You have unsaved changes. Switching branches will discard them.'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, false),
@@ -674,7 +708,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                             ),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange),
                               child: const Text('Switch Anyway'),
                             ),
                           ],
@@ -707,7 +742,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text("Quick Actions",
-              style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: Colors.deepPurple, fontWeight: FontWeight.bold)),
           TextButton.icon(
             icon: const Icon(Icons.copy_all, size: 18),
             label: const Text("Apply Monday to All"),
@@ -730,7 +766,7 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: validationError != null 
+        side: validationError != null
             ? const BorderSide(color: Colors.orange, width: 2)
             : BorderSide.none,
       ),
@@ -753,7 +789,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
               if (validationError != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: Icon(Icons.warning_amber, size: 18, color: Colors.orange[700]),
+                  child: Icon(Icons.warning_amber,
+                      size: 18, color: Colors.orange[700]),
                 ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -766,7 +803,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: isOpen ? Colors.green.shade800 : Colors.grey.shade600,
+                    color:
+                        isOpen ? Colors.green.shade800 : Colors.grey.shade600,
                   ),
                 ),
               ),
@@ -780,9 +818,12 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                 _workingHours[day] = _workingHours[day] ?? {};
                 _workingHours[day]['isOpen'] = val;
                 // Initialize a default slot if enabling and no slots exist
-                if (val && (_workingHours[day]['slots'] == null || 
-                    (_workingHours[day]['slots'] as List).isEmpty)) {
-                  _workingHours[day]['slots'] = [{'open': '09:00', 'close': '22:00'}];
+                if (val &&
+                    (_workingHours[day]['slots'] == null ||
+                        (_workingHours[day]['slots'] as List).isEmpty)) {
+                  _workingHours[day]['slots'] = [
+                    {'open': '09:00', 'close': '22:00'}
+                  ];
                 }
               });
             },
@@ -802,7 +843,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                       Expanded(
                         child: Text(
                           validationError,
-                          style: TextStyle(color: Colors.orange[700], fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.orange[700], fontSize: 12),
                         ),
                       ),
                     ],
@@ -842,7 +884,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
                 color: Colors.grey.shade50,
                 child: const Center(
                     child: Text('Closed all day',
-                        style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))),
+                        style: TextStyle(
+                            color: Colors.grey, fontStyle: FontStyle.italic))),
               ),
           ],
         ),
@@ -878,7 +921,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
             child: _TimeChip(
               label: "Open",
               time: _formatTimeForDisplay(context, slot['open'] ?? '09:00'),
-              onTap: () => _pickTime(day, index, 'open', slot['open'] ?? '09:00'),
+              onTap: () =>
+                  _pickTime(day, index, 'open', slot['open'] ?? '09:00'),
             ),
           ),
           const Padding(
@@ -889,7 +933,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
             child: _TimeChip(
               label: "Close",
               time: _formatTimeForDisplay(context, slot['close'] ?? '22:00'),
-              onTap: () => _pickTime(day, index, 'close', slot['close'] ?? '22:00'),
+              onTap: () =>
+                  _pickTime(day, index, 'close', slot['close'] ?? '22:00'),
             ),
           ),
           const SizedBox(width: 8),
@@ -899,7 +944,8 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
               color: totalSlots > 1 ? Colors.redAccent : Colors.grey,
             ),
             onPressed: totalSlots > 1 ? () => _removeSlot(day, index) : null,
-            tooltip: totalSlots > 1 ? "Remove Shift" : "At least one slot required",
+            tooltip:
+                totalSlots > 1 ? "Remove Shift" : "At least one slot required",
           ),
         ],
       ),
@@ -912,7 +958,8 @@ class _TimeChip extends StatelessWidget {
   final String time;
   final VoidCallback onTap;
 
-  const _TimeChip({required this.label, required this.time, required this.onTap});
+  const _TimeChip(
+      {required this.label, required this.time, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -936,10 +983,12 @@ class _TimeChip extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+            Text(label,
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
             const SizedBox(height: 2),
             Text(time,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
           ],
         ),
       ),
