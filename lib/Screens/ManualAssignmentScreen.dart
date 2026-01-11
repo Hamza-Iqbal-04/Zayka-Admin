@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../Widgets/RiderAssignment.dart';
 import '../Widgets/BranchFilterService.dart'; // ✅ Added for filtering
+import '../Widgets/CancellationDialog.dart'; // ✅ Added for CancellationReasonDialog
 import '../main.dart'; // Assuming UserScopeService is here
 import '../constants.dart'; // For OrderNumberHelper
 
@@ -18,7 +19,7 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
   Future<void> _promptAssignRider(
       BuildContext context, String orderId, String currentBranchId) async {
     if (!mounted) return;
-    
+
     // Capture ScaffoldMessengerState BEFORE async operations
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
@@ -30,12 +31,12 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
 
     if (riderId != null && riderId.isNotEmpty) {
       if (!mounted) return;
-      
+
       final result = await RiderAssignmentService.manualAssignRider(
         orderId: orderId,
         riderId: riderId,
       );
-      
+
       // Use pre-captured ScaffoldMessengerState (safe across async gaps)
       if (mounted) {
         scaffoldMessenger.showSnackBar(
@@ -44,6 +45,51 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
             backgroundColor: result.backgroundColor,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _promptCancelOrder(BuildContext context, String orderId) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => const CancellationReasonDialog(
+        title: 'Cancel Order?',
+        confirmText: 'Confirm Cancel',
+        reasons: CancellationReasons.orderReasons,
+      ),
+    );
+
+    if (reason != null && reason.trim().isNotEmpty) {
+      if (!mounted) return;
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('Orders')
+            .doc(orderId)
+            .update({
+          'status': 'cancelled',
+          'cancellationReason': reason,
+          'cancelledAt': FieldValue.serverTimestamp(),
+          'cancelledBy': 'Admin Integration', // Or user email if available
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Order cancelled successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to cancel order: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -70,15 +116,16 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
         .where('Order_type', isEqualTo: 'delivery');
 
     // Filter by branch logic (BranchAdmin OR SuperAdmin with selection)
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
-    
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
+
     if (userScope.isSuperAdmin && userScope.branchIds.isEmpty) {
-       // Show all
+      // Show all
     } else if (filterBranchIds.isNotEmpty) {
       query = query.where('branchIds', arrayContainsAny: filterBranchIds);
     } else if (!userScope.isSuperAdmin) {
-       // Should be covered above, but safe fallback
-       query = query.where('branchIds', arrayContains: userScope.branchId);
+      // Should be covered above, but safe fallback
+      query = query.where('branchIds', arrayContains: userScope.branchId);
     }
 
     return Scaffold(
@@ -90,7 +137,7 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
         centerTitle: !(userScope.branchIds.length > 1), // Center if no selector
         actions: [
           if (userScope.branchIds.length > 1)
-             _buildBranchSelector(userScope, branchFilter),
+            _buildBranchSelector(userScope, branchFilter),
         ],
         title: const Text(
           'Manual Rider Assignment',
@@ -102,14 +149,14 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: query.snapshots()
-        as Stream<QuerySnapshot<Map<String, dynamic>>>,
+        stream:
+            query.snapshots() as Stream<QuerySnapshot<Map<String, dynamic>>>,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(Colors.deepPurple),
-                ));
+              valueColor: AlwaysStoppedAnimation(Colors.deepPurple),
+            ));
           }
 
           if (snapshot.hasError) {
@@ -119,13 +166,12 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: Colors.red[300]),
+                    Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                     const SizedBox(height: 16),
                     const Text(
                       'An Error Occurred',
                       style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -193,7 +239,8 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
             itemBuilder: (context, index) {
               final orderDoc = docs[index];
               final data = orderDoc.data();
-              final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
+              final orderNumber = OrderNumberHelper.getDisplayNumber(data,
+                  orderId: orderDoc.id);
               final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
               final reason = data['assignmentNotes'] ?? 'No reason provided';
               final customerName = data['customerName'] ?? 'N/A';
@@ -246,13 +293,13 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
                       Text(
                         timestamp != null
                             ? DateFormat('MMM dd, yyyy hh:mm a')
-                            .format(timestamp)
+                                .format(timestamp)
                             : 'No date',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                       const Divider(height: 24),
-                      _buildDetailRow(Icons.person_outline, 'Customer:',
-                          customerName,
+                      _buildDetailRow(
+                          Icons.person_outline, 'Customer:', customerName,
                           valueColor: Colors.black87),
                       _buildDetailRow(Icons.account_balance_wallet_outlined,
                           'Total:', 'QAR ${totalAmount.toStringAsFixed(2)}',
@@ -265,7 +312,7 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
                           color: Colors.red.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
                           border:
-                          Border.all(color: Colors.red.withOpacity(0.1)),
+                              Border.all(color: Colors.red.withOpacity(0.1)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,32 +335,56 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.delivery_dining, size: 18),
-                          label: const Text('Assign Rider Manually'),
-                          onPressed: () {
-                            // Fix: Use order's branch ID, not user's current branch
-                            final orderBranchId = data['branchId']?.toString() ?? 
-                                (data['branchIds'] is List && (data['branchIds'] as List).isNotEmpty 
-                                    ? data['branchIds'][0].toString() 
-                                    : null);
-                            
-                            _promptAssignRider(
-                              context,
-                              orderDoc.id,
-                              orderBranchId ?? userScope.branchId ?? '',
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text('Cancel Order'),
+                              onPressed: () =>
+                                  _promptCancelOrder(context, orderDoc.id),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.delivery_dining, size: 18),
+                              label: const Text('Assign Rider'),
+                              onPressed: () {
+                                // Fix: Use order's branch ID, not user's current branch
+                                final orderBranchId =
+                                    data['branchId']?.toString() ??
+                                        (data['branchIds'] is List &&
+                                                (data['branchIds'] as List)
+                                                    .isNotEmpty
+                                            ? data['branchIds'][0].toString()
+                                            : null);
+
+                                _promptAssignRider(
+                                  context,
+                                  orderDoc.id,
+                                  orderBranchId ?? userScope.branchId ?? '',
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -338,7 +409,7 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
           Text(
             label,
             style:
-            TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4),
+                TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.4),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -357,7 +428,8 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
   }
 
   // Same branch selector logic
-  Widget _buildBranchSelector(UserScopeService userScope, BranchFilterService branchFilter) {
+  Widget _buildBranchSelector(
+      UserScopeService userScope, BranchFilterService branchFilter) {
     return Container(
       margin: const EdgeInsets.only(right: 12),
       child: PopupMenuButton<String>(
@@ -380,7 +452,8 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
                 child: Text(
                   branchFilter.selectedBranchId == null
                       ? 'All Branches'
-                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
                   style: const TextStyle(
                     color: Colors.deepPurple,
                     fontWeight: FontWeight.w600,
@@ -398,25 +471,41 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
           PopupMenuItem<String>(
             value: BranchFilterService.allBranchesValue,
             child: Row(children: [
-               Icon(branchFilter.selectedBranchId == null ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == null ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               const Text('All Branches'),
+              Icon(
+                  branchFilter.selectedBranchId == null
+                      ? Icons.check_circle
+                      : Icons.circle_outlined,
+                  size: 18,
+                  color: branchFilter.selectedBranchId == null
+                      ? Colors.deepPurple
+                      : Colors.grey),
+              const SizedBox(width: 10),
+              const Text('All Branches'),
             ]),
           ),
           const PopupMenuDivider(),
           ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
-            value: branchId,
-            child: Row(children: [
-               Icon(branchFilter.selectedBranchId == branchId ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == branchId ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               Flexible(child: Text(branchFilter.getBranchName(branchId), overflow: TextOverflow.ellipsis)),
-            ]),
-          )),
+                value: branchId,
+                child: Row(children: [
+                  Icon(
+                      branchFilter.selectedBranchId == branchId
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 18,
+                      color: branchFilter.selectedBranchId == branchId
+                          ? Colors.deepPurple
+                          : Colors.grey),
+                  const SizedBox(width: 10),
+                  Flexible(
+                      child: Text(branchFilter.getBranchName(branchId),
+                          overflow: TextOverflow.ellipsis)),
+                ]),
+              )),
         ],
         onSelected: (value) => branchFilter.selectBranch(value),
       ),
     );
-  } 
+  }
 }
 
 class RiderSelectionDialog extends StatelessWidget {
@@ -452,8 +541,7 @@ class RiderSelectionDialog extends StatelessWidget {
           ),
         ],
       ),
-      content:
-      Container(
+      content: Container(
         width: double.maxFinite,
         height: 300,
         child: StreamBuilder<QuerySnapshot>(
@@ -473,8 +561,7 @@ class RiderSelectionDialog extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: Colors.red[300]),
+                    Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                     const SizedBox(height: 16),
                     Text(
                       'Error loading riders: ${snapshot.error}',
@@ -524,8 +611,7 @@ class RiderSelectionDialog extends StatelessWidget {
                 final data = driverDoc.data() as Map<String, dynamic>;
                 final String name = data['name'] ?? 'Unnamed Driver';
                 final String phone = data['phone']?.toString() ?? 'No phone';
-                final String vehicle =
-                    data['vehicle']?['type'] ?? 'No vehicle';
+                final String vehicle = data['vehicle']?['type'] ?? 'No vehicle';
 
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 5),
@@ -536,7 +622,7 @@ class RiderSelectionDialog extends StatelessWidget {
                   ),
                   child: ListTile(
                     contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: CircleAvatar(
                       backgroundColor: Colors.deepPurple.withOpacity(0.1),
                       child: const Icon(
@@ -551,8 +637,7 @@ class RiderSelectionDialog extends StatelessWidget {
                       ),
                     ),
                     subtitle: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           phone,
