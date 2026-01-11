@@ -10,7 +10,6 @@ import 'BranchManagement.dart';
 import 'OrdersScreen.dart';
 import '../Widgets/BranchFilterService.dart';
 
-
 class RidersScreen extends StatefulWidget {
   const RidersScreen({super.key});
 
@@ -35,31 +34,37 @@ class _RidersScreenState extends State<RidersScreen> {
 
     // --- 2. Build Branch-Scoped Query ---
     Query<Map<String, dynamic>> baseQuery =
-    FirebaseFirestore.instance.collection('Drivers').orderBy('name');
+        FirebaseFirestore.instance.collection('Drivers').orderBy('name');
 
     // Get branch IDs properly from filter service
     // Note: We need to access branchFilter here. Since it wasn't watched in original code, we should technically check if it's available or use userScope fallback.
     // However, for consistency, we should use BranchFilterService if possible.
     final branchFilter = context.watch<BranchFilterService>();
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     // Always filter by branches - SuperAdmin sees only their assigned branches
     if (filterBranchIds.isNotEmpty) {
-       if (filterBranchIds.length == 1) {
-         baseQuery = baseQuery.where('branchIds', arrayContains: filterBranchIds.first);
-       } else {
-         baseQuery = baseQuery.where('branchIds', arrayContainsAny: filterBranchIds);
-       }
+      if (filterBranchIds.length == 1) {
+        baseQuery =
+            baseQuery.where('branchIds', arrayContains: filterBranchIds.first);
+      } else {
+        baseQuery =
+            baseQuery.where('branchIds', arrayContainsAny: filterBranchIds);
+      }
     } else if (userScope.branchIds.isNotEmpty) {
-       // Fall back to user's assigned branches
-       if (userScope.branchIds.length == 1) {
-          baseQuery = baseQuery.where('branchIds', arrayContains: userScope.branchIds.first);
-       } else {
-          baseQuery = baseQuery.where('branchIds', arrayContainsAny: userScope.branchIds);
-       }
+      // Fall back to user's assigned branches
+      if (userScope.branchIds.length == 1) {
+        baseQuery = baseQuery.where('branchIds',
+            arrayContains: userScope.branchIds.first);
+      } else {
+        baseQuery =
+            baseQuery.where('branchIds', arrayContainsAny: userScope.branchIds);
+      }
     } else {
       // User with no branches - force empty result
-       baseQuery = baseQuery.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
+      baseQuery = baseQuery.where(FieldPath.documentId,
+          isEqualTo: 'force_empty_result');
     }
 
     // Assign query to scope-level variable if needed, or just use in _buildEnhancedDriversList
@@ -159,18 +164,24 @@ class _RidersScreenState extends State<RidersScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildEnhancedFilterChip('All', 'all', Icons.people_outline, Colors.blue),
-            _buildEnhancedFilterChip('Online', 'online', Icons.wifi_outlined, Colors.green),
-            _buildEnhancedFilterChip('Offline', 'offline', Icons.wifi_off_outlined, Colors.grey),
-            _buildEnhancedFilterChip('Available', 'available', Icons.check_circle_outline, Colors.teal),
-            _buildEnhancedFilterChip('Busy', 'busy', Icons.cancel_outlined, Colors.orange),
+            _buildEnhancedFilterChip(
+                'All', 'all', Icons.people_outline, Colors.blue),
+            _buildEnhancedFilterChip(
+                'Online', 'online', Icons.wifi_outlined, Colors.green),
+            _buildEnhancedFilterChip(
+                'Offline', 'offline', Icons.wifi_off_outlined, Colors.grey),
+            _buildEnhancedFilterChip('Available', 'available',
+                Icons.check_circle_outline, Colors.teal),
+            _buildEnhancedFilterChip(
+                'Busy', 'busy', Icons.cancel_outlined, Colors.orange),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEnhancedFilterChip(String label, String value, IconData icon, Color color) {
+  Widget _buildEnhancedFilterChip(
+      String label, String value, IconData icon, Color color) {
     final isSelected = _filterStatus == value;
     return Container(
       margin: const EdgeInsets.only(right: 12, bottom: 16),
@@ -221,28 +232,33 @@ class _RidersScreenState extends State<RidersScreen> {
   }
 
   Widget _buildEnhancedDriversList(UserScopeService userScope) {
-    final branchFilter = Provider.of<BranchFilterService>(context); // Listen to branch changes
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('Drivers');
+    final branchFilter =
+        Provider.of<BranchFilterService>(context); // Listen to branch changes
+    Query<Map<String, dynamic>> query =
+        FirebaseFirestore.instance.collection('Drivers');
 
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
 
     // Always filter by branches - SuperAdmin sees only their assigned branches
     if (filterBranchIds.isNotEmpty) {
-        if (filterBranchIds.length == 1) {
-          query = query.where('branchIds', arrayContains: filterBranchIds.first);
-        } else {
-          query = query.where('branchIds', arrayContainsAny: filterBranchIds);
-        }
+      if (filterBranchIds.length == 1) {
+        query = query.where('branchIds', arrayContains: filterBranchIds.first);
+      } else {
+        query = query.where('branchIds', arrayContainsAny: filterBranchIds);
+      }
     } else if (userScope.branchIds.isNotEmpty) {
-        // Fall back to user's assigned branches
-         if (userScope.branchIds.length == 1) {
-          query = query.where('branchIds', arrayContains: userScope.branchIds.first);
-        } else {
-          query = query.where('branchIds', arrayContainsAny: userScope.branchIds);
-        }
+      // Fall back to user's assigned branches
+      if (userScope.branchIds.length == 1) {
+        query =
+            query.where('branchIds', arrayContains: userScope.branchIds.first);
+      } else {
+        query = query.where('branchIds', arrayContainsAny: userScope.branchIds);
+      }
     } else {
-       // User with no branches - force empty result
-        query = query.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
+      // User with no branches - force empty result
+      query =
+          query.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
     }
 
     // Apply status filters
@@ -264,7 +280,8 @@ class _RidersScreenState extends State<RidersScreen> {
           debugPrint("RidersScreen Error: ${snapshot.error}");
           return ProfessionalErrorWidget(
             title: 'Could not load drivers',
-            message: 'Permission denied or a Firestore index is missing. Please check your console.',
+            message:
+                'Permission denied or a Firestore index is missing. Please check your console.',
             icon: Icons.delivery_dining,
             onRetry: () => setState(() {}),
           );
@@ -320,7 +337,8 @@ class _RidersScreenState extends State<RidersScreen> {
             return EnhancedDriverCard(
               driver: driver,
               onTap: () => _showDriverDetails(context, driver),
-              onEdit: () => _showDriverDialog(context, userScope, driverDoc: driver),
+              onEdit: () =>
+                  _showDriverDialog(context, userScope, driverDoc: driver),
             );
           },
         );
@@ -330,13 +348,14 @@ class _RidersScreenState extends State<RidersScreen> {
 
   /// Shows the Add/Edit Driver Dialog.
   void _showDriverDialog(
-      BuildContext context,
-      UserScopeService userScope, {
-        DocumentSnapshot<Map<String, dynamic>>? driverDoc,
-      }) {
+    BuildContext context,
+    UserScopeService userScope, {
+    DocumentSnapshot<Map<String, dynamic>>? driverDoc,
+  }) {
     showDialog(
       context: context,
-      builder: (context) => _DriverDialog(userScope: userScope, driverDoc: driverDoc),
+      builder: (context) =>
+          _DriverDialog(userScope: userScope, driverDoc: driverDoc),
     );
   }
 
@@ -405,7 +424,8 @@ class EnhancedDriverCard extends StatefulWidget {
   State<EnhancedDriverCard> createState() => _EnhancedDriverCardState();
 }
 
-class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTickerProviderStateMixin {
+class _EnhancedDriverCardState extends State<EnhancedDriverCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isExpanded = false;
@@ -554,15 +574,15 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
             borderRadius: BorderRadius.circular(35),
             child: driverInfo.profileImageUrl.isNotEmpty
                 ? FadeInImage.assetNetwork(
-              placeholder: 'assets/placeholder_avatar.png',
-              image: driverInfo.profileImageUrl,
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              fadeInDuration: const Duration(milliseconds: 300),
-              imageErrorBuilder: (context, error, stackTrace) =>
-                  _buildDefaultAvatar(),
-            )
+                    placeholder: 'assets/placeholder_avatar.png',
+                    image: driverInfo.profileImageUrl,
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 300),
+                    imageErrorBuilder: (context, error, stackTrace) =>
+                        _buildDefaultAvatar(),
+                  )
                 : _buildDefaultAvatar(),
           ),
         ),
@@ -679,7 +699,10 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
                 '${driverInfo.vehicle.type} • ${driverInfo.vehicle.number}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -719,7 +742,10 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
                 SizedBox(width: 4),
                 Text(
                   'Available',
-                  style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -899,13 +925,30 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  '#${orderId.substring(0, 8).toUpperCase()}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('Orders')
+                      .doc(orderId)
+                      .get(),
+                  builder: (context, snapshot) {
+                    String displayId =
+                        '#${orderId.substring(0, 8).toUpperCase()}';
+                    if (snapshot.hasData && snapshot.data!.exists) {
+                      final data =
+                          snapshot.data!.data() as Map<String, dynamic>;
+                      if (data['dailyOrderNumber'] != null) {
+                        displayId = '#${data['dailyOrderNumber']}';
+                      }
+                    }
+                    return Text(
+                      displayId,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1178,7 +1221,8 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Cannot delete while assigned to an order. Unassign first.'),
+                content: Text(
+                    'Cannot delete while assigned to an order. Unassign first.'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -1205,7 +1249,8 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
 
     final lat = loc.latitude.toStringAsFixed(6);
     final lng = loc.longitude.toStringAsFixed(6);
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
@@ -1219,7 +1264,8 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
     }
   }
 
-  Future<bool> _confirmDeleteDriver(BuildContext context, String driverName) async {
+  Future<bool> _confirmDeleteDriver(
+      BuildContext context, String driverName) async {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -1229,7 +1275,8 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
             const SizedBox(width: 12),
-            const Text('Delete Driver?', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Delete Driver?',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
@@ -1239,15 +1286,19 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w500)),
+            child: const Text('Cancel',
+                style: TextStyle(fontWeight: FontWeight.w500)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1257,16 +1308,23 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
 
   Future<void> _deleteDriverDoc(BuildContext context) async {
     try {
-      await FirebaseFirestore.instance.collection('Drivers').doc(widget.driver.id).delete();
+      await FirebaseFirestore.instance
+          .collection('Drivers')
+          .doc(widget.driver.id)
+          .delete();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Driver deleted successfully.'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Driver deleted successfully.'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to delete: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -1280,7 +1338,6 @@ class _EnhancedDriverCardState extends State<EnhancedDriverCard> with SingleTick
     );
   }
 }
-
 
 /// Card to display driver info
 class _DriverCard extends StatelessWidget {
@@ -1310,10 +1367,8 @@ class _DriverCard extends StatelessWidget {
         leading: CircleAvatar(
           radius: 25,
           backgroundImage:
-          profileImageUrl.isNotEmpty ? NetworkImage(profileImageUrl) : null,
-          child: profileImageUrl.isEmpty
-              ? const Icon(Icons.person)
-              : null,
+              profileImageUrl.isNotEmpty ? NetworkImage(profileImageUrl) : null,
+          child: profileImageUrl.isEmpty ? const Icon(Icons.person) : null,
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(email),
@@ -1394,14 +1449,17 @@ class _DriverDialogState extends State<_DriverDialog> {
     _nameCtrl = TextEditingController(text: data?['name']?.toString() ?? '');
     _emailCtrl = TextEditingController(text: data?['email']?.toString() ?? '');
     _phoneCtrl = TextEditingController(text: data?['phone']?.toString() ?? '');
-    _profileImgCtrl = TextEditingController(text: data?['profileImageUrl']?.toString() ?? '');
+    _profileImgCtrl =
+        TextEditingController(text: data?['profileImageUrl']?.toString() ?? '');
     _status = data?['status']?.toString() ?? 'offline';
     _isAvailable = data?['isAvailable'] ?? false;
     _selectedBranchIds = List<String>.from(data?['branchIds'] ?? []);
 
     final vehicle = data?['vehicle'] as Map<String, dynamic>? ?? {};
-    _vehicleTypeCtrl = TextEditingController(text: vehicle['type']?.toString() ?? 'Motorcycle');
-    _vehicleNumCtrl = TextEditingController(text: vehicle['number']?.toString() ?? '');
+    _vehicleTypeCtrl = TextEditingController(
+        text: vehicle['type']?.toString() ?? 'Motorcycle');
+    _vehicleNumCtrl =
+        TextEditingController(text: vehicle['number']?.toString() ?? '');
   }
 
   @override
@@ -1451,11 +1509,16 @@ class _DriverDialogState extends State<_DriverDialog> {
           'number': _vehicleNumCtrl.text.trim(),
         },
         // Fields not editable here but preserved/set on create
-        'assignedOrderId': _isEdit ? widget.driverDoc!.data()!['assignedOrderId'] ?? '' : '',
+        'assignedOrderId':
+            _isEdit ? widget.driverDoc!.data()!['assignedOrderId'] ?? '' : '',
         'fcmToken': _isEdit ? widget.driverDoc!.data()!['fcmToken'] ?? '' : '',
         'rating': _isEdit ? widget.driverDoc!.data()!['rating'] ?? '0' : '0',
-        'totalDeliveries': _isEdit ? widget.driverDoc!.data()!['totalDeliveries'] ?? 0 : 0,
-        'currentLocation': _isEdit ? widget.driverDoc!.data()!['currentLocation'] ?? const GeoPoint(0,0) : const GeoPoint(0,0),
+        'totalDeliveries':
+            _isEdit ? widget.driverDoc!.data()!['totalDeliveries'] ?? 0 : 0,
+        'currentLocation': _isEdit
+            ? widget.driverDoc!.data()!['currentLocation'] ??
+                const GeoPoint(0, 0)
+            : const GeoPoint(0, 0),
       };
 
       if (_isEdit) {
@@ -1477,7 +1540,8 @@ class _DriverDialogState extends State<_DriverDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Driver ${_isEdit ? 'updated' : 'added'} successfully!'),
+            content:
+                Text('Driver ${_isEdit ? 'updated' : 'added'} successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1547,7 +1611,8 @@ class _DriverDialogState extends State<_DriverDialog> {
               ),
               TextFormField(
                 controller: _profileImgCtrl,
-                decoration: const InputDecoration(labelText: 'Profile Image URL'),
+                decoration:
+                    const InputDecoration(labelText: 'Profile Image URL'),
               ),
 
               // Use your existing MultiBranchSelector component
@@ -1564,7 +1629,8 @@ class _DriverDialogState extends State<_DriverDialog> {
               ] else ...[
                 // Show read-only branch info for non-super admins
                 ListTile(
-                  leading: const Icon(Icons.business_sharp, color: Colors.indigo),
+                  leading:
+                      const Icon(Icons.business_sharp, color: Colors.indigo),
                   title: const Text('Assigned Branch'),
                   subtitle: Text(
                     widget.userScope.branchIds.isEmpty
@@ -1586,19 +1652,18 @@ class _DriverDialogState extends State<_DriverDialog> {
           onPressed: _onSave,
           child: _isLoading
               ? const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : Text(_isEdit ? 'Update' : 'Add'),
         ),
       ],
     );
   }
 }
+
 /// A multi-select chip field for branches.
-
-
 
 /// Bottom Sheet for detailed driver information
 /// Bottom Sheet for detailed driver information
@@ -1661,15 +1726,15 @@ class _DriverDetailsBottomSheet extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                     child: driverInfo.profileImageUrl.isNotEmpty
                         ? FadeInImage.assetNetwork(
-                      placeholder: 'assets/placeholder_avatar.png',
-                      image: driverInfo.profileImageUrl,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      fadeInDuration: const Duration(milliseconds: 300),
-                      imageErrorBuilder: (context, error, stackTrace) =>
-                          _buildDefaultAvatar(),
-                    )
+                            placeholder: 'assets/placeholder_avatar.png',
+                            image: driverInfo.profileImageUrl,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            fadeInDuration: const Duration(milliseconds: 300),
+                            imageErrorBuilder: (context, error, stackTrace) =>
+                                _buildDefaultAvatar(),
+                          )
                         : _buildDefaultAvatar(),
                   ),
                 ),
@@ -1855,7 +1920,8 @@ class _DriverDetailsBottomSheet extends StatelessWidget {
           _buildInfoRow(
             icon: Icons.phone_rounded,
             label: 'Phone',
-            value: driverInfo.phone.isNotEmpty ? driverInfo.phone : 'Not provided',
+            value:
+                driverInfo.phone.isNotEmpty ? driverInfo.phone : 'Not provided',
             color: Colors.green,
           ),
           const SizedBox(height: 12),
@@ -2067,7 +2133,9 @@ class _DriverDetailsBottomSheet extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _buildQuickActionButton(
-            icon: driverInfo.isAvailable ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            icon: driverInfo.isAvailable
+                ? Icons.pause_rounded
+                : Icons.play_arrow_rounded,
             label: driverInfo.isAvailable ? 'Pause' : 'Activate',
             color: driverInfo.isAvailable ? Colors.orange : Colors.green,
             onTap: () => _toggleAvailability(context, driverInfo),
@@ -2260,7 +2328,8 @@ class _DriverDetailsBottomSheet extends StatelessWidget {
     // You might want to trigger the edit dialog here
   }
 
-  Future<void> _toggleAvailability(BuildContext context, DriverInfo driverInfo) async {
+  Future<void> _toggleAvailability(
+      BuildContext context, DriverInfo driverInfo) async {
     try {
       await FirebaseFirestore.instance
           .collection('Drivers')
@@ -2304,7 +2373,8 @@ class _DriverDetailsBottomSheet extends StatelessWidget {
 
     final lat = location.latitude.toStringAsFixed(6);
     final lng = location.longitude.toStringAsFixed(6);
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
 
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
@@ -2330,7 +2400,8 @@ class _DriverOrderHistoryScreen extends StatefulWidget {
   });
 
   @override
-  State<_DriverOrderHistoryScreen> createState() => _DriverOrderHistoryScreenState();
+  State<_DriverOrderHistoryScreen> createState() =>
+      _DriverOrderHistoryScreenState();
 }
 
 class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
@@ -2424,7 +2495,10 @@ class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
           children: [
             const Text(
               'Order History',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple, fontSize: 20),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
+                  fontSize: 20),
             ),
             Text(
               widget.driverName,
@@ -2469,7 +2543,8 @@ class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
                 ),
                 backgroundColor: Colors.deepPurple.withOpacity(0.1),
                 checkmarkColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
               ),
             );
           }).toList(),
@@ -2509,7 +2584,8 @@ class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
 
     if (_orders.isEmpty && !_isLoading) {
       return const Center(
-        child: Text("No orders found.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+        child: Text("No orders found.",
+            style: TextStyle(color: Colors.grey, fontSize: 16)),
       );
     }
 
@@ -2525,9 +2601,14 @@ class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
               child: Center(
                 child: ElevatedButton(
                   onPressed: _fetchOrders,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple),
                   child: _isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
                       : const Text("Load More (6 Orders)"),
                 ),
               ),
@@ -2535,7 +2616,9 @@ class _DriverOrderHistoryScreenState extends State<_DriverOrderHistoryScreen> {
           } else {
             return const Padding(
               padding: EdgeInsets.all(20),
-              child: Center(child: Text("No more orders", style: TextStyle(color: Colors.grey))),
+              child: Center(
+                  child: Text("No more orders",
+                      style: TextStyle(color: Colors.grey))),
             );
           }
         }
@@ -2560,7 +2643,8 @@ class _OrderHistoryCard extends StatelessWidget {
     final orderId = order.id;
     final status = data['status']?.toString() ?? 'unknown';
     final timestamp = data['timestamp'] as Timestamp?;
-    final totalAmount = double.tryParse(data['totalAmount']?.toString() ?? '0') ?? 0.0;
+    final totalAmount =
+        double.tryParse(data['totalAmount']?.toString() ?? '0') ?? 0.0;
 
     // ✅ Fix Delivery Address Crash (Handle Map vs String)
     String address = 'No address';
@@ -2579,18 +2663,30 @@ class _OrderHistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Order #${orderId.substring(0, 6)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Order #${orderId.substring(0, 6)}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text(status.toUpperCase(), style: TextStyle(color: _getStatusColor(status), fontSize: 10, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                  color: _getStatusColor(status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8)),
+              child: Text(status.toUpperCase(),
+                  style: TextStyle(
+                      color: _getStatusColor(status),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
             )
           ],
         ),
@@ -2599,9 +2695,14 @@ class _OrderHistoryCard extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
             Text('📅 $dateStr', style: const TextStyle(fontSize: 12)),
-            Text('📍 $address', style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('📍 $address',
+                style: const TextStyle(fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
-            Text('QAR ${totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+            Text('QAR ${totalAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.deepPurple)),
           ],
         ),
       ),
@@ -2614,7 +2715,6 @@ class _OrderHistoryCard extends StatelessWidget {
     return Colors.grey;
   }
 }
-
 
 class DriverInfo {
   final String name;
@@ -2644,7 +2744,8 @@ class DriverInfo {
   });
 
   factory DriverInfo.fromFirestore(Map<String, dynamic> data) {
-    final vehicleData = (data['vehicle'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final vehicleData = (data['vehicle'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
 
     String phoneStr;
     final dynamic rawPhone = data['phone'];

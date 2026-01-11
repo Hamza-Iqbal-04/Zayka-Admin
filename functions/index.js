@@ -1049,9 +1049,13 @@ exports.handleRiderAcceptance = onDocumentUpdated(
                 logger.log(`[${orderId}] ✅ Unlocked rider ${riderId} after rejection`);
 
                 // Step 2: Update assignment status to track rejection
+                // CRITICAL: Add rejected rider to triedRiders so findNextRider skips them
+                // Also set riderId to RETRY_SEARCH for consistency with the task handler
                 await event.data.after.ref.update({
                     status: 'searching', // Mark as searching again
+                    riderId: 'RETRY_SEARCH', // Clear riderId for retry search
                     rejectedBy: FieldValue.arrayUnion(riderId),
+                    triedRiders: FieldValue.arrayUnion(riderId), // BUG FIX: Add to triedRiders so they won't be selected again
                     lastRejectionAt: FieldValue.serverTimestamp(),
                     notificationSent: false, // RESET FLAG so next rider gets notified
                 });
@@ -1392,6 +1396,17 @@ function _calculateDistance(lat1, lon1, lat2, lon2) {
 async function sendAssignmentFCM(riderId, orderId, orderData) {
     logger.log(`[${orderId}] 📤 PREPARING FCM (V1) for rider ${riderId}...`);
     try {
+        // BUG FIX: Check notificationSent flag FIRST to prevent duplicate FCM
+        const assignDoc = await db.collection('rider_assignments').doc(orderId).get();
+        if (assignDoc.exists) {
+            const assignData = assignDoc.data();
+            // Only block if notificationSent is true AND riderId matches (same notification attempt)
+            if (assignData.notificationSent === true && assignData.riderId === riderId) {
+                logger.warn(`[${orderId}] ⚠️ FCM already sent to rider ${riderId}, skipping duplicate`);
+                return true; // Return true since notification was already sent
+            }
+        }
+
         const driverDoc = await db.collection('Drivers').doc(riderId).get();
 
         if (!driverDoc.exists) {
@@ -1416,8 +1431,8 @@ async function sendAssignmentFCM(riderId, orderId, orderData) {
             // Custom Data (Payload)
             data: {
                 type: 'auto_assignment',
-                title: '📦 New Order Available',
-                body: `New ${orderData.Order_type || 'Delivery'} Order`,
+                title: '🚨 New Order Offer!',
+                body: `Tap quickly! You have 2 minutes to accept.`,
                 orderId: orderId,
                 timeoutSeconds: String(ASSIGNMENT_TIMEOUT_SECONDS),
                 click_action: 'FLUTTER_NOTIFICATION_CLICK', // For legacy listeners
@@ -1429,8 +1444,8 @@ async function sendAssignmentFCM(riderId, orderId, orderData) {
             android: {
                 priority: 'high',
                 notification: {
-                    title: '📦 New Order Available',
-                    body: `New ${orderData.Order_type || 'Delivery'} Order`,
+                    title: '🚨 New Order Offer!',
+                    body: `Tap quickly! You have 2 minutes to accept.`,
                     clickAction: 'FLUTTER_NOTIFICATION_CLICK', // RESTORED: Critical for routing
                     sound: 'default',
                     priority: 'high',
@@ -1445,8 +1460,8 @@ async function sendAssignmentFCM(riderId, orderId, orderData) {
                 payload: {
                     aps: {
                         alert: {
-                            title: '📦 New Order Available',
-                            body: `New ${orderData.Order_type || 'Delivery'} Order`,
+                            title: '🚨 New Order Offer!',
+                            body: `Tap quickly! You have 2 minutes to accept.`,
                         },
                         contentAvailable: true,
                         sound: 'default',

@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // State to track logout process
   bool _isLoggingOut = false;
-  
+
   // Cache permission state to prevent flash during scope reload
   bool? _hadPermissionOnInit;
 
@@ -153,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         body: AccessDeniedWidget(permission: 'manage settings'),
       );
     }
-    
+
     // Update cached permission state
     _hadPermissionOnInit = true;
 
@@ -186,7 +186,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 24),
 
             // Administration Section
-            if (userScope.isSuperAdmin || userScope.can(Permissions.canManageStaff) || userScope.can(Permissions.canManageCoupons)) ...[
+            if (userScope.isSuperAdmin ||
+                userScope.can(Permissions.canManageStaff) ||
+                userScope.can(Permissions.canManageCoupons)) ...[
               _buildSectionTitle('Administration', Icons.admin_panel_settings),
               const SizedBox(height: 12),
               _buildGroupedSettingsCard([
@@ -197,7 +199,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Manage opening hours',
                     iconColor: Colors.orange,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const RestaurantTimingScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const RestaurantTimingScreen()),
                     ),
                   ),
                 if (userScope.isSuperAdmin || userScope.role == 'branchadmin')
@@ -207,17 +210,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'View past orders',
                     iconColor: Colors.blue,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const OrderHistoryScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const OrderHistoryScreen()),
                     ),
                   ),
-                if (userScope.isSuperAdmin && userScope.can(Permissions.canManageStaff))
+                if (userScope.isSuperAdmin &&
+                    userScope.can(Permissions.canManageStaff))
                   _SettingsItem(
                     icon: Icons.people_alt,
                     title: 'Staff Management',
                     subtitle: 'Manage team members',
                     iconColor: Colors.deepPurple,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const StaffManagementScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const StaffManagementScreen()),
                     ),
                   ),
                 if (userScope.can(Permissions.canManageCoupons))
@@ -227,7 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Create discount codes',
                     iconColor: Colors.teal,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const CouponManagementScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const CouponManagementScreen()),
                     ),
                   ),
                 if (userScope.isSuperAdmin)
@@ -237,7 +244,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Manage branches',
                     iconColor: Colors.indigo,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const BranchManagementScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const BranchManagementScreen()),
                     ),
                   ),
                 if (userScope.isSuperAdmin || userScope.role == 'branch_admin')
@@ -247,7 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Manage restaurant tables',
                     iconColor: Colors.teal,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const TableManagementScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const TableManagementScreen()),
                     ),
                   ),
                 if (userScope.isSuperAdmin)
@@ -257,7 +266,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'View reports & insights',
                     iconColor: Colors.green,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const AnalyticsScreen()),
                     ),
                   ),
               ]),
@@ -286,7 +296,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (val) {
                     setState(() => _darkModeEnabled = val);
                     _savePreference('dark_mode_enabled', val);
-                    _showSnackBar(context, 'Dark mode ${val ? 'enabled' : 'disabled'}');
+                    _showSnackBar(
+                        context, 'Dark mode ${val ? 'enabled' : 'disabled'}');
                   },
                 ),
               ),
@@ -379,11 +390,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileCard(UserScopeService userScope, AuthService authService) {
-    final initials = userScope.userEmail.isNotEmpty 
-        ? userScope.userEmail.substring(0, 2).toUpperCase() 
+  Widget _buildProfileCard(
+      UserScopeService userScope, AuthService authService) {
+    final initials = userScope.userEmail.isNotEmpty
+        ? userScope.userEmail.substring(0, 2).toUpperCase()
         : 'U';
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -452,7 +464,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getRoleColor(userScope.role).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -475,7 +488,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Expanded(
                         child: Text(
                           userScope.branchId,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -501,17 +515,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Color _getRoleColor(String role) {
     switch (role.toLowerCase()) {
-      case 'super_admin': return Colors.deepPurple;
-      case 'branch_admin': return Colors.blue;
-      case 'manager': return Colors.teal;
-      default: return Colors.grey;
+      case 'super_admin':
+        return Colors.deepPurple;
+      case 'branch_admin':
+        return Colors.blue;
+      case 'manager':
+        return Colors.teal;
+      default:
+        return Colors.grey;
     }
   }
 
   String _formatRole(String role) {
-    return role.replaceAll('_', ' ').split(' ').map((word) => 
-      word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : ''
-    ).join(' ');
+    return role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) => word.isNotEmpty
+            ? '${word[0].toUpperCase()}${word.substring(1)}'
+            : '')
+        .join(' ');
   }
 
   Widget _buildSectionTitle(String title, IconData icon) {
@@ -560,12 +582,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final index = entry.key;
           final item = entry.value;
           final isLast = index == validItems.length - 1;
-          
+
           return Column(
             children: [
               _buildSettingsRow(item),
               if (!isLast)
-                Divider(height: 1, indent: 72, endIndent: 16, color: Colors.grey[200]),
+                Divider(
+                    height: 1,
+                    indent: 72,
+                    endIndent: 16,
+                    color: Colors.grey[200]),
             ],
           );
         }).toList(),
@@ -614,7 +640,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (item.trailing != null)
               item.trailing!
             else
-              Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 22),
+              Icon(Icons.chevron_right_rounded,
+                  color: Colors.grey[400], size: 22),
           ],
         ),
       ),
@@ -843,17 +870,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Select Language'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: languages.map((language) => _LanguageOption(
-            language: language,
-            code: _getLanguageCode(language),
-            isSelected: language == _selectedLanguage,
-            onTap: () {
-              setState(() => _selectedLanguage = language);
-              _savePreference('selected_language', language);
-              Navigator.pop(context);
-              _showSnackBar(context, 'Language changed to $language');
-            },
-          )).toList(),
+          children: languages
+              .map((language) => _LanguageOption(
+                    language: language,
+                    code: _getLanguageCode(language),
+                    isSelected: language == _selectedLanguage,
+                    onTap: () {
+                      setState(() => _selectedLanguage = language);
+                      _savePreference('selected_language', language);
+                      Navigator.pop(context);
+                      _showSnackBar(context, 'Language changed to $language');
+                    },
+                  ))
+              .toList(),
         ),
       ),
     );
@@ -875,21 +904,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: colors.map((color) => GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              _showSnackBar(context, 'Theme color updated');
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-            ),
-          )).toList(),
+          children: colors
+              .map((color) => GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showSnackBar(context, 'Theme color updated');
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ))
+              .toList(),
         ),
       ),
     );
@@ -910,7 +941,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _reportBug(BuildContext context) async {
     const email = 'bugs@yourapp.com';
     const subject = 'Bug Report - Admin App';
-    const body = 'Bug Description:\nSteps to reproduce:\nExpected behavior:\nActual behavior:';
+    const body =
+        'Bug Description:\nSteps to reproduce:\nExpected behavior:\nActual behavior:';
     final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -989,7 +1021,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Icon(Icons.flutter_dash, size: 16, color: Colors.blue[400]),
                 const SizedBox(width: 8),
-                Text('Built with Flutter', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                Text('Built with Flutter',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
               ],
             ),
           ],
@@ -1018,7 +1051,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 title: Row(
                   children: [
                     Icon(Icons.check_circle, color: Colors.green[600]),
@@ -1044,7 +1078,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 actions: [
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple),
                     child: const Text('OK'),
                   ),
                 ],
@@ -1052,9 +1087,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           }
         });
-        
+
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Checking for Updates'),
           content: const Column(
             mainAxisSize: MainAxisSize.min,
@@ -1077,7 +1113,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your account?'),
+        content:
+            const Text('Are you sure you want to sign out of your account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1118,7 +1155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // ensuring the user lands on AuthWrapper/LoginScreen clean.
                 navigator.pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const AuthWrapper()),
-                      (route) => false,
+                  (route) => false,
                 );
               }
             },
@@ -1132,12 +1169,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getLanguageCode(String language) {
     switch (language) {
-      case 'English': return 'US';
-      case 'Arabic': return 'SA';
-      case 'Hindi': return 'IN';
-      case 'Spanish': return 'ES';
-      case 'French': return 'FR';
-      default: return 'US';
+      case 'English':
+        return 'US';
+      case 'Arabic':
+        return 'SA';
+      case 'Hindi':
+        return 'IN';
+      case 'Spanish':
+        return 'ES';
+      case 'French':
+        return 'FR';
+      default:
+        return 'US';
     }
   }
 }
@@ -1243,8 +1286,6 @@ class _BranchSettingItem extends StatelessWidget {
   }
 }
 
-
-
 // -----------------------------------------------------------------------------
 // STAFF MANAGEMENT SCREEN (Unchanged from previous fix, included for completeness)
 // -----------------------------------------------------------------------------
@@ -1258,7 +1299,7 @@ class StaffManagementScreen extends StatefulWidget {
 
 class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  
+
   // Track if we had permission initially (to avoid flash during scope reload)
   bool? _hadPermissionOnInit;
 
@@ -1269,7 +1310,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
 
     // Cache the initial permission state
     if (_hadPermissionOnInit == null && userScope.isLoaded) {
-      _hadPermissionOnInit = userScope.isSuperAdmin && userScope.can(Permissions.canManageStaff);
+      _hadPermissionOnInit =
+          userScope.isSuperAdmin && userScope.can(Permissions.canManageStaff);
     }
 
     // Show loading indicator while scope is loading/reloading
@@ -1334,7 +1376,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           ),
         );
       }
-      
+
       return Scaffold(
         appBar: AppBar(title: const Text('Access Denied')),
         body: const Center(
@@ -1342,7 +1384,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
         ),
       );
     }
-    
+
     // Update cached permission state
     _hadPermissionOnInit = true;
 
@@ -1363,11 +1405,10 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
         ),
         actions: [
           if (userScope.branchIds.length > 1)
-             // Reuse the selector widget logic or extract it. 
-             // Since it's private in other files, I'll inline a simple version or use a shared widget?
-             // Ideally I should have made it a shared widget. I'll duplicate for safety now to avoid wide refactor.
-             _buildBranchSelector(userScope, branchFilter),
-
+            // Reuse the selector widget logic or extract it.
+            // Since it's private in other files, I'll inline a simple version or use a shared widget?
+            // Ideally I should have made it a shared widget. I'll duplicate for safety now to avoid wide refactor.
+            _buildBranchSelector(userScope, branchFilter),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: IconButton(
@@ -1397,41 +1438,47 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           }
 
           final staffMembers = snapshot.data?.docs ?? [];
-          
+
           // Separate list logic
-          // 1. Fetch current user data (if not in list, we might need a separate stream, 
+          // 1. Fetch current user data (if not in list, we might need a separate stream,
           // but for now, we scan the list OR rely on the fact that SuperAdmins usually see themselves.
           // BUT if filter excludes me, I am not in `staffMembers`.
-          
+
           // To guarantee "Me" shows up, we need a separate stream for "Me" if I'm not in the query results?
           // Or just query "Me" always.
-          
+
           return CustomScrollView(
             slivers: [
               // 1. My Profile Section (Always Visible)
               SliverToBoxAdapter(
                 child: StreamBuilder<DocumentSnapshot>(
-                   stream: _db.collection('staff').doc(userScope.userEmail).snapshots(),
-                   builder: (context, snapshot) {
-                      if (!snapshot.hasData || !snapshot.data!.exists) return const SizedBox.shrink();
-                      final data = snapshot.data!.data() as Map<String, dynamic>;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        child: _StaffCard(
-                          staffId: userScope.userEmail!,
-                          data: data,
-                          isSelf: true,
-                          onEdit: () => _showEditStaffDialog(userScope.userEmail!, data, true),
-                        ),
-                      );
-                   },
+                  stream: _db
+                      .collection('staff')
+                      .doc(userScope.userEmail)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || !snapshot.data!.exists)
+                      return const SizedBox.shrink();
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                      child: _StaffCard(
+                        staffId: userScope.userEmail!,
+                        data: data,
+                        isSelf: true,
+                        onEdit: () => _showEditStaffDialog(
+                            userScope.userEmail!, data, true),
+                      ),
+                    );
+                  },
                 ),
               ),
-              
+
               // 2. Staff List (Filtered)
               if (staffMembers.isEmpty)
                 const SliverFillRemaining(
-                   child: Center(
+                  child: Center(
                     child: Text(
                       'No staff members found matching filter',
                       style: TextStyle(fontSize: 16, color: Colors.grey),
@@ -1444,16 +1491,19 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                     (context, index) {
                       final staff = staffMembers[index];
                       // Skip self because it's shown at top
-                      if (staff.id == userScope.userEmail) return const SizedBox.shrink();
-                      
+                      if (staff.id == userScope.userEmail)
+                        return const SizedBox.shrink();
+
                       final data = staff.data() as Map<String, dynamic>;
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), // Adjusted padding
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 8), // Adjusted padding
                         child: _StaffCard(
                           staffId: staff.id,
                           data: data,
                           isSelf: false,
-                          onEdit: () => _showEditStaffDialog(staff.id, data, false),
+                          onEdit: () =>
+                              _showEditStaffDialog(staff.id, data, false),
                         ),
                       );
                     },
@@ -1479,7 +1529,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
-  void _showEditStaffDialog(String staffId, Map<String, dynamic> currentData, bool isSelf) {
+  void _showEditStaffDialog(
+      String staffId, Map<String, dynamic> currentData, bool isSelf) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1501,7 +1552,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
 
       if (docSnapshot.exists) {
         if (mounted) {
-          _showSnackBar('❌ User with email $email already exists.', isError: true);
+          _showSnackBar('❌ User with email $email already exists.',
+              isError: true);
         }
         return;
       }
@@ -1515,18 +1567,18 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
         'phone': staffData['phone'] ?? '', // ✅ Include phone
         'role': staffData['role'],
         'isActive': true,
-        
+
         // Branch assignments
         'branchIds': staffData['branchIds'] ?? [],
-        
+
         // Permissions
         'permissions': staffData['permissions'] ?? {},
-        
+
         // Metadata
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': context.read<UserScopeService>().userEmail,
         'lastUpdated': FieldValue.serverTimestamp(),
-        
+
         // NOTE: FCM tokens are now stored in subcollection 'staff/{email}/tokens'
         // No need to store fcmToken or fcmTokenUpdated at root level
       });
@@ -1541,10 +1593,11 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     }
   }
 
-  Future<void> _updateStaffMember(String staffId, Map<String, dynamic> staffData) async {
+  Future<void> _updateStaffMember(
+      String staffId, Map<String, dynamic> staffData) async {
     try {
       final userScope = context.read<UserScopeService>();
-      
+
       // ✅ IMPROVED: Explicitly update only allowed fields, add audit metadata
       await _db.collection('staff').doc(staffId).update({
         'name': staffData['name'],
@@ -1572,19 +1625,22 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   // Removed _reloadCurrentUserScope() - the UserScopeService has a real-time
   // Firestore listener that automatically updates when the staff document changes.
   // Manually calling clearScope() + loadUserScope() caused a flash of "Access Denied".
-  
 
   // ✅ Query definition
-  Stream<QuerySnapshot> _getStaffQuery(UserScopeService userScope, BranchFilterService branchFilter) {
+  Stream<QuerySnapshot> _getStaffQuery(
+      UserScopeService userScope, BranchFilterService branchFilter) {
     Query query = _db.collection('staff');
 
     // Always filter by branches - SuperAdmin sees only their assigned branches
-    final filterBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
-    debugPrint("DEBUG: _getStaffQuery called. FilterBranchIds: $filterBranchIds");
-    
+    final filterBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
+    debugPrint(
+        "DEBUG: _getStaffQuery called. FilterBranchIds: $filterBranchIds");
+
     if (filterBranchIds.isNotEmpty) {
       if (filterBranchIds.length == 1) {
-        debugPrint("DEBUG: Using arrayContains for single branch: ${filterBranchIds.first}");
+        debugPrint(
+            "DEBUG: Using arrayContains for single branch: ${filterBranchIds.first}");
         query = query.where('branchIds', arrayContains: filterBranchIds.first);
       } else {
         debugPrint("DEBUG: Using arrayContainsAny for: $filterBranchIds");
@@ -1593,20 +1649,23 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     } else if (userScope.branchIds.isNotEmpty) {
       // Fall back to user's assigned branches
       if (userScope.branchIds.length == 1) {
-        query = query.where('branchIds', arrayContains: userScope.branchIds.first);
+        query =
+            query.where('branchIds', arrayContains: userScope.branchIds.first);
       } else {
         query = query.where('branchIds', arrayContainsAny: userScope.branchIds);
       }
     } else {
       // User with no branches - return impossible query (empty result)
-      query = query.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
+      query =
+          query.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
     }
-    
+
     return query.snapshots();
   }
 
   // ✅ Branch Selector Widget
-  Widget _buildBranchSelector(UserScopeService userScope, BranchFilterService branchFilter) {
+  Widget _buildBranchSelector(
+      UserScopeService userScope, BranchFilterService branchFilter) {
     return Container(
       margin: const EdgeInsets.only(right: 4),
       child: PopupMenuButton<String>(
@@ -1629,7 +1688,8 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                 child: Text(
                   branchFilter.selectedBranchId == null
                       ? 'All Branches'
-                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
                   style: const TextStyle(
                     color: Colors.deepPurple,
                     fontWeight: FontWeight.w600,
@@ -1647,20 +1707,36 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
           PopupMenuItem<String>(
             value: BranchFilterService.allBranchesValue,
             child: Row(children: [
-               Icon(branchFilter.selectedBranchId == null ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == null ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               const Text('All Branches'),
+              Icon(
+                  branchFilter.selectedBranchId == null
+                      ? Icons.check_circle
+                      : Icons.circle_outlined,
+                  size: 18,
+                  color: branchFilter.selectedBranchId == null
+                      ? Colors.deepPurple
+                      : Colors.grey),
+              const SizedBox(width: 10),
+              const Text('All Branches'),
             ]),
           ),
           const PopupMenuDivider(),
           ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
-            value: branchId,
-            child: Row(children: [
-               Icon(branchFilter.selectedBranchId == branchId ? Icons.check_circle : Icons.circle_outlined, size:18, color: branchFilter.selectedBranchId == branchId ? Colors.deepPurple : Colors.grey),
-               const SizedBox(width: 10),
-               Flexible(child: Text(branchFilter.getBranchName(branchId), overflow: TextOverflow.ellipsis)),
-            ]),
-          )),
+                value: branchId,
+                child: Row(children: [
+                  Icon(
+                      branchFilter.selectedBranchId == branchId
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 18,
+                      color: branchFilter.selectedBranchId == branchId
+                          ? Colors.deepPurple
+                          : Colors.grey),
+                  const SizedBox(width: 10),
+                  Flexible(
+                      child: Text(branchFilter.getBranchName(branchId),
+                          overflow: TextOverflow.ellipsis)),
+                ]),
+              )),
         ],
         onSelected: (value) => branchFilter.selectBranch(value),
       ),
@@ -1703,7 +1779,9 @@ class _StaffCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelf ? Colors.deepPurple.withOpacity(0.03) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: isSelf ? Border.all(color: Colors.deepPurple.withOpacity(0.3)) : null,
+        border: isSelf
+            ? Border.all(color: Colors.deepPurple.withOpacity(0.3))
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1756,7 +1834,8 @@ class _StaffCard extends StatelessWidget {
                           if (isSelf)
                             Container(
                               margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.deepPurple,
                                 borderRadius: BorderRadius.circular(4),
@@ -1782,7 +1861,8 @@ class _StaffCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.deepPurple),
+                  icon:
+                      const Icon(Icons.edit_outlined, color: Colors.deepPurple),
                   onPressed: onEdit,
                 ),
               ],
@@ -1827,6 +1907,9 @@ class _StaffCard extends StatelessWidget {
     final normalized = role.toLowerCase().replaceAll('_', '');
     if (normalized == 'superadmin') return 'Super Admin';
     if (normalized == 'branchadmin') return 'Branch Admin';
+    if (normalized == 'superadmin') return 'Super Admin';
+    if (normalized == 'branchadmin') return 'Branch Admin';
+    if (normalized == 'server') return 'Server';
     return role.toUpperCase();
   }
 }
@@ -1836,7 +1919,8 @@ class _StatusBadge extends StatelessWidget {
   final Color color;
   final IconData icon;
 
-  const _StatusBadge({required this.label, required this.color, required this.icon});
+  const _StatusBadge(
+      {required this.label, required this.color, required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -1894,7 +1978,7 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
   String _selectedRole = 'branch_admin';
   bool _isActive = true;
   List<String> _selectedBranches = [];
-  
+
   // Email validation regex
   static final _emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
@@ -1920,14 +2004,15 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
       if (rawRole == 'superadmin') rawRole = 'super_admin';
       if (rawRole == 'branchadmin') rawRole = 'branch_admin';
 
-      if (['super_admin', 'branch_admin'].contains(rawRole)) {
+      if (['super_admin', 'branch_admin', 'server'].contains(rawRole)) {
         _selectedRole = rawRole;
       } else {
         _selectedRole = 'branch_admin';
       }
 
       _isActive = widget.currentData!['isActive'] ?? true;
-      _selectedBranches = List<String>.from(widget.currentData!['branchIds'] ?? []);
+      _selectedBranches =
+          List<String>.from(widget.currentData!['branchIds'] ?? []);
 
       final currentPermissions = widget.currentData!['permissions'] ?? {};
       _permissions.forEach((key, value) {
@@ -1981,8 +2066,10 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: _inputDecoration('Full Name', Icons.person_outline),
-                        validator: (v) => (v?.trim().isEmpty ?? true) ? 'Required' : null,
+                        decoration:
+                            _inputDecoration('Full Name', Icons.person_outline),
+                        validator: (v) =>
+                            (v?.trim().isEmpty ?? true) ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -1991,12 +2078,15 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                         keyboardType: TextInputType.emailAddress,
                         textCapitalization: TextCapitalization.none,
                         autocorrect: false,
-                        decoration: _inputDecoration('Email Address', Icons.email_outlined).copyWith(
+                        decoration: _inputDecoration(
+                                'Email Address', Icons.email_outlined)
+                            .copyWith(
                           filled: widget.isEditing,
                           hintText: 'user@example.com',
                         ),
                         validator: (v) {
-                          if (v?.trim().isEmpty ?? true) return 'Email is required';
+                          if (v?.trim().isEmpty ?? true)
+                            return 'Email is required';
                           final email = v!.trim().toLowerCase();
                           if (!_emailRegex.hasMatch(email)) {
                             return 'Please enter a valid email address';
@@ -2009,33 +2099,58 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                           padding: const EdgeInsets.only(top: 4, left: 12),
                           child: Text(
                             'Email cannot be changed after creation.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                         ),
                       const SizedBox(height: 16),
-                      
+
                       // ✅ NEW: Phone number field
                       TextFormField(
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
-                        decoration: _inputDecoration('Phone Number (Optional)', Icons.phone_outlined).copyWith(
+                        decoration: _inputDecoration(
+                                'Phone Number (Optional)', Icons.phone_outlined)
+                            .copyWith(
                           hintText: '+974 XXXX XXXX',
                         ),
                         // Phone is optional, no validator needed
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      const Text('Role & Access', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('Role & Access',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
                         value: _selectedRole,
-                        onChanged: widget.isSelf ? null : (value) {
-                          if (value != null) setState(() => _selectedRole = value);
-                        },
-                        decoration: _inputDecoration('Select Role', Icons.security),
+                        onChanged: widget.isSelf
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _selectedRole = value;
+                                    // If 'server' is selected, clear all permissions by default
+                                    if (_selectedRole == 'server') {
+                                      for (var key in _permissions.keys) {
+                                        _permissions[key] = false;
+                                      }
+                                    }
+                                  });
+                                }
+                              },
+                        decoration:
+                            _inputDecoration('Select Role', Icons.security),
                         items: const [
-                          DropdownMenuItem(value: 'branch_admin', child: Text('Branch Admin')),
-                          DropdownMenuItem(value: 'super_admin', child: Text('Super Admin')),
+                          DropdownMenuItem(
+                              value: 'branch_admin',
+                              child: Text('Branch Admin')),
+                          DropdownMenuItem(
+                              value: 'branch_admin',
+                              child: Text('Branch Admin')),
+                          DropdownMenuItem(
+                              value: 'super_admin', child: Text('Super Admin')),
+                          DropdownMenuItem(
+                              value: 'server', child: Text('Server')),
                         ],
                       ),
                       if (widget.isSelf)
@@ -2050,20 +2165,27 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Account Active'),
-                        subtitle: Text(_isActive ? 'User can log in' : 'User access revoked'),
+                        subtitle: Text(_isActive
+                            ? 'User can log in'
+                            : 'User access revoked'),
                         value: _isActive,
                         activeColor: Colors.deepPurple,
-                        onChanged: widget.isSelf ? null : (val) => setState(() => _isActive = val),
+                        onChanged: widget.isSelf
+                            ? null
+                            : (val) => setState(() => _isActive = val),
                       ),
                       const SizedBox(height: 16),
-                      const Text('Assigned Branches', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('Assigned Branches',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       MultiBranchSelector(
                         selectedIds: _selectedBranches,
-                        onChanged: (list) => setState(() => _selectedBranches = list),
+                        onChanged: (list) =>
+                            setState(() => _selectedBranches = list),
                       ),
                       const SizedBox(height: 24),
-                      const Text('Detailed Permissions', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('Detailed Permissions',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Container(
                         decoration: BoxDecoration(
@@ -2076,7 +2198,8 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                               title: Text(_formatPermission(key)),
                               value: _permissions[key],
                               activeColor: Colors.deepPurple,
-                              onChanged: (val) => setState(() => _permissions[key] = val!),
+                              onChanged: (val) =>
+                                  setState(() => _permissions[key] = val!),
                             );
                           }).toList(),
                         ),
@@ -2100,10 +2223,13 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                     onPressed: _validateAndSave,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: Text(widget.isEditing ? 'Save Changes' : 'Create User'),
+                    child:
+                        Text(widget.isEditing ? 'Save Changes' : 'Create User'),
                   ),
                 ],
               ),
@@ -2120,18 +2246,20 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
       if (_selectedRole == 'branch_admin' && _selectedBranches.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚠️ Branch Admins must be assigned to at least one branch.'),
+            content: Text(
+                '⚠️ Branch Admins must be assigned to at least one branch.'),
             backgroundColor: Colors.orange,
           ),
         );
         return;
       }
-      
+
       // Validation: Super Admins should also have branches for scope
       if (_selectedRole == 'super_admin' && _selectedBranches.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚠️ Super Admins should be assigned to at least one branch.'),
+            content: Text(
+                '⚠️ Super Admins should be assigned to at least one branch.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -2163,9 +2291,10 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
   }
 
   String _formatPermission(String key) {
-    return key.replaceFirst('can', '').replaceAllMapped(
-        RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}'
-    ).trim();
+    return key
+        .replaceFirst('can', '')
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}')
+        .trim();
   }
 }
 
@@ -2251,15 +2380,19 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
   Future<void> _loadBranches() async {
     try {
       // Check if SuperAdmin has multiple branches assigned
-      final hasMultipleBranches = widget.userScope.isSuperAdmin && widget.userScope.branchIds.length > 1;
-      
+      final hasMultipleBranches = widget.userScope.isSuperAdmin &&
+          widget.userScope.branchIds.length > 1;
+
       if (hasMultipleBranches) {
         // SuperAdmin with multiple branches - load only their assigned branches
         final branchIds = widget.userScope.branchIds;
         final List<Map<String, dynamic>> loadedBranches = [];
-        
+
         for (final branchId in branchIds) {
-          final doc = await FirebaseFirestore.instance.collection('Branch').doc(branchId).get();
+          final doc = await FirebaseFirestore.instance
+              .collection('Branch')
+              .doc(branchId)
+              .get();
           if (doc.exists) {
             final data = doc.data()!;
             loadedBranches.add({
@@ -2269,7 +2402,7 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
             });
           }
         }
-        
+
         setState(() {
           _branches = loadedBranches;
           if (_branches.isNotEmpty) {
@@ -2317,12 +2450,20 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
 
       final data = doc.data() ?? {};
       final workingHours = data['workingHours'] as Map<String, dynamic>? ?? {};
-      
+
       // Simple schedule check
       bool isScheduleOpen = false;
       if (workingHours.isNotEmpty) {
         final now = DateTime.now();
-        final dayName = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][now.weekday - 1];
+        final dayName = [
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+          'sunday'
+        ][now.weekday - 1];
         final daySchedule = workingHours[dayName];
         if (daySchedule != null && daySchedule['isOpen'] == true) {
           isScheduleOpen = true;
@@ -2370,7 +2511,8 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
+            content:
+                Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
             backgroundColor: newStatus ? Colors.green : Colors.orange,
           ),
         );
@@ -2417,101 +2559,101 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _isOpen ? Icons.storefront : Icons.no_food_rounded,
-                color: _isOpen ? Colors.green : Colors.red,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Restaurant Status',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.deepPurple,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _isOpen ? Icons.storefront : Icons.no_food_rounded,
+                  color: _isOpen ? Colors.green : Colors.red,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Branch selector for SuperAdmin
-          if (widget.userScope.isSuperAdmin && _branches.length > 1) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedBranchId,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  items: _branches.map((branch) {
-                    final branchIsOpen = branch['isOpen'] ?? false;
-                    return DropdownMenuItem<String>(
-                      value: branch['id'],
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.circle,
-                            size: 10,
-                            color: branchIsOpen ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(branch['name']),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: _onBranchChanged,
+                const SizedBox(width: 12),
+                const Text(
+                  'Restaurant Status',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 16),
-          ],
 
-          // Status toggle
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _isOpen
-                      ? 'Restaurant is OPEN and accepting orders'
-                      : 'Restaurant is CLOSED',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+            // Branch selector for SuperAdmin
+            if (widget.userScope.isSuperAdmin && _branches.length > 1) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedBranchId,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    items: _branches.map((branch) {
+                      final branchIsOpen = branch['isOpen'] ?? false;
+                      return DropdownMenuItem<String>(
+                        value: branch['id'],
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
+                              size: 10,
+                              color: branchIsOpen ? Colors.green : Colors.red,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(branch['name']),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: _onBranchChanged,
                   ),
                 ),
               ),
-              _isToggling
-                  ? const SizedBox(
-                      width: 48,
-                      height: 24,
-                      child: Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    )
-                  : Switch(
-                      value: _isOpen,
-                      onChanged: _toggleStatus,
-                      activeColor: Colors.green,
-                      inactiveThumbColor: Colors.red,
-                    ),
+              const SizedBox(height: 16),
             ],
-          ),
-        ],
-      ),
+
+            // Status toggle
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isOpen
+                        ? 'Restaurant is OPEN and accepting orders'
+                        : 'Restaurant is CLOSED',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ),
+                _isToggling
+                    ? const SizedBox(
+                        width: 48,
+                        height: 24,
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      )
+                    : Switch(
+                        value: _isOpen,
+                        onChanged: _toggleStatus,
+                        activeColor: Colors.green,
+                        inactiveThumbColor: Colors.red,
+                      ),
+              ],
+            ),
+          ],
+        ),
       ), // Close Padding
     ); // Close Card
   }
