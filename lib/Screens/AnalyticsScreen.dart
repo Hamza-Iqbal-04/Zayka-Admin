@@ -607,17 +607,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 primaryXAxis: CategoryAxis(
                   majorGridLines: const MajorGridLines(width: 0),
                   axisLine: const AxisLine(width: 0),
-                  labelStyle: TextStyle(color: Colors.grey[700], fontSize: 12),
+                  labelStyle: TextStyle(color: Colors.black87, fontSize: 12),
                 ),
                 primaryYAxis: NumericAxis(
                   title: AxisTitle(
                     text: 'Sales Amount (QAR)',
-                    textStyle: TextStyle(color: Colors.grey[700]),
+                    textStyle: TextStyle(
+                        color: Colors.black87, fontWeight: FontWeight.bold),
                   ),
                   majorGridLines:
                       const MajorGridLines(width: 0.5, color: Colors.grey),
                   axisLine: const AxisLine(width: 0),
-                  labelStyle: TextStyle(color: Colors.grey[700], fontSize: 12),
+                  labelStyle: TextStyle(color: Colors.black87, fontSize: 12),
                 ),
                 tooltipBehavior: TooltipBehavior(
                   enable: true,
@@ -909,12 +910,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   isVisible: true,
                   overflowMode: LegendItemOverflowMode.wrap,
                   position: LegendPosition.bottom,
-                  textStyle: TextStyle(color: Colors.grey[700]),
+                  // ✅ IMPROVED: Better legend styling
+                  textStyle: TextStyle(
+                      color: Colors.grey[800],
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500),
+                  iconHeight: 12,
+                  iconWidth: 12,
+                  padding: 16,
                 ),
                 series: <PieSeries<OrderTypeData, String>>[
                   PieSeries<OrderTypeData, String>(
                     dataSource: chartData,
-                    xValueMapper: (OrderTypeData data, _) => data.orderType,
+                    // ✅ FIXED: Legend now shows formatted text (e.g. "Dine In") instead of keys
+                    xValueMapper: (OrderTypeData data, _) =>
+                        _formatOrderTypeForPieLabel(data.orderType),
                     yValueMapper: (OrderTypeData data, _) => data.count,
                     pointColorMapper: (OrderTypeData data, _) => data.color,
                     dataLabelMapper: (OrderTypeData data, _) {
@@ -925,14 +935,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     dataLabelSettings: const DataLabelSettings(
                       isVisible: true,
                       labelPosition: ChartDataLabelPosition.inside,
+                      // ✅ IMPROVED: High contrast black labels
                       textStyle: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white,
+                          fontSize: 11,
+                          color: Colors.black87,
                           fontWeight: FontWeight.bold),
+                      connectorLineSettings:
+                          ConnectorLineSettings(type: ConnectorType.curve),
                     ),
                     explode: true,
                     explodeIndex: 0,
-                    radius: '80%',
+                    radius: '75%', // Slightly smaller to give breathing room
+                    strokeWidth: 2, // ✅ IMPROVED: White separation lines
+                    strokeColor: Colors.white,
                   ),
                 ],
               );
