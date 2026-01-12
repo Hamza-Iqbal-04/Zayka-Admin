@@ -1335,6 +1335,7 @@ class _MenuItemCard extends StatelessWidget {
     final name = data['name'] ?? 'Unnamed Item';
     final nameAr = data['name_ar'] as String? ?? '';
     final description = data['description'] ?? 'No description';
+    final descriptionAr = data['description_ar'] as String? ?? '';
     final price = (data['price'] as num?)?.toDouble() ?? 0.0;
     final discountedPrice = (data['discountedPrice'] as num?)?.toDouble();
     final bool hasDiscount = discountedPrice != null && discountedPrice > 0;
@@ -1471,6 +1472,17 @@ class _MenuItemCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (descriptionAr.isNotEmpty)
+                          Text(
+                            descriptionAr,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textDirection: TextDirection.rtl,
+                          ),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -2843,6 +2855,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
   late TextEditingController _nameController;
   late TextEditingController _nameArController;
   late TextEditingController _descController;
+  late TextEditingController _descArController;
   late TextEditingController _priceController;
   late TextEditingController _imageUrlController;
   late TextEditingController _estimatedTimeController;
@@ -2883,6 +2896,8 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
     _nameController = TextEditingController(text: data['name'] ?? '');
     _nameArController = TextEditingController(text: data['name_ar'] ?? '');
     _descController = TextEditingController(text: data['description'] ?? '');
+    _descArController =
+        TextEditingController(text: data['description_ar'] ?? '');
     _priceController =
         TextEditingController(text: (data['price'] as num?)?.toString() ?? '');
     _imageUrlController = TextEditingController(text: data['imageUrl'] ?? '');
@@ -2962,6 +2977,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
       'name': _nameController.text.trim(),
       'name_ar': _nameArController.text.trim(),
       'description': _descController.text.trim(),
+      'description_ar': _descArController.text.trim(),
       'price': double.tryParse(_priceController.text) ?? 0.0,
       'discountedPrice': (discountedPrice != null && discountedPrice > 0)
           ? discountedPrice
@@ -3407,6 +3423,18 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                         filled: true,
                         fillColor: Colors.white,
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _descArController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Arabic)',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      textDirection: TextDirection.rtl,
                     ),
                     const SizedBox(height: 12),
                     Row(
