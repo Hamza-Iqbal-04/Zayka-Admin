@@ -1697,9 +1697,11 @@ class _OrderCardState extends State<_OrderCard> {
     final orderNumber =
         OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
-    final double deliveryFee =
-        (data['deliveryFee'] as num? ?? data['deliveryCharge'] as num? ?? 0.0)
-            .toDouble();
+    final double deliveryFee = (data['riderPaymentAmount'] as num? ??
+            data['deliveryFee'] as num? ??
+            data['deliveryCharge'] as num? ??
+            0.0)
+        .toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
 
     final bool isAutoAssigning =
@@ -2936,7 +2938,11 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
     final orderNumber =
         OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
-    final double deliveryFee = (data['deliveryFee'] as num? ?? 0.0).toDouble();
+    final double deliveryFee = (data['riderPaymentAmount'] as num? ??
+            data['deliveryFee'] as num? ??
+            data['deliveryCharge'] as num? ??
+            0.0)
+        .toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
     final String orderType = data['Order_type'] as String? ?? 'delivery';
 

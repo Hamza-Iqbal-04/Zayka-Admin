@@ -65,17 +65,18 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         }
       }
 
-      query = query
-          .where('status', whereIn: ['delivered', 'cancelled'])
-          .orderBy('timestamp', descending: true);
+      query = query.where('status', whereIn: [
+        'delivered',
+        'cancelled'
+      ]).orderBy('timestamp', descending: true);
 
       if (_startDate != null) {
         query = query.where('timestamp', isGreaterThanOrEqualTo: _startDate);
       }
 
       if (_endDate != null) {
-        final inclusiveEndDate =
-        DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+        final inclusiveEndDate = DateTime(
+            _endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
         query = query.where('timestamp', isLessThanOrEqualTo: inclusiveEndDate);
       }
 
@@ -191,7 +192,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Text(
                 'Filtering: ${DateFormat('MMM d').format(_startDate!)} - ${DateFormat('MMM d').format(_endDate!)}',
-                style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.deepPurple, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -213,9 +215,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             children: [
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 16),
-              Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+              Text(_errorMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red)),
               const SizedBox(height: 16),
-              ElevatedButton(onPressed: _resetAndFetchOrders, child: const Text('Retry')),
+              ElevatedButton(
+                  onPressed: _resetAndFetchOrders, child: const Text('Retry')),
             ],
           ),
         ),
@@ -233,7 +238,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           children: [
             Icon(Icons.history, size: 80, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text('No completed orders found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+            Text('No completed orders found',
+                style: TextStyle(fontSize: 18, color: Colors.grey[600])),
           ],
         ),
       );
@@ -249,7 +255,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             child: Center(
               child: _isLoading
                   ? const CircularProgressIndicator()
-                  : ElevatedButton(onPressed: _fetchOrders, child: const Text('Load More')),
+                  : ElevatedButton(
+                      onPressed: _fetchOrders, child: const Text('Load More')),
             ),
           );
         }
@@ -268,9 +275,12 @@ class _OrderHistoryItem extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'delivered': return Colors.green;
-      case 'cancelled': return Colors.red;
-      default: return Colors.grey;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -285,7 +295,8 @@ class _OrderHistoryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = orderDoc.data() as Map<String, dynamic>;
     final status = data['status']?.toString() ?? 'Unknown';
-    final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
     final totalAmount = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
     final customerName = data['customerName']?.toString() ?? 'Guest';
@@ -308,14 +319,17 @@ class _OrderHistoryItem extends StatelessWidget {
                 children: [
                   Text(
                     'Order #$orderNumber',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: _getStatusColor(status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _getStatusColor(status).withOpacity(0.5)),
+                      border: Border.all(
+                          color: _getStatusColor(status).withOpacity(0.5)),
                     ),
                     child: Text(
                       status.toUpperCase(),
@@ -348,19 +362,26 @@ class _OrderHistoryItem extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Customer', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      Text('Customer',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
                       const SizedBox(height: 2),
-                      Text(customerName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      Text(customerName,
+                          style: const TextStyle(fontWeight: FontWeight.w500)),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('Total', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      Text('Total',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12)),
                       const SizedBox(height: 2),
                       Text(
                         'QAR ${totalAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple),
                       ),
                     ],
                   ),
@@ -368,7 +389,8 @@ class _OrderHistoryItem extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               // Show quick rejection reason if cancelled
-              if (status.toLowerCase() == 'cancelled' && data['cancellationReason'] != null)
+              if (status.toLowerCase() == 'cancelled' &&
+                  data['cancellationReason'] != null)
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 12),
@@ -380,7 +402,10 @@ class _OrderHistoryItem extends StatelessWidget {
                   ),
                   child: Text(
                     'Cancelled: ${data['cancellationReason']}',
-                    style: TextStyle(color: Colors.red.shade800, fontSize: 12, fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -395,19 +420,26 @@ class _OrderHistoryItem extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      orderType.toLowerCase() == 'delivery' ? Icons.delivery_dining : Icons.storefront,
+                      orderType.toLowerCase() == 'delivery'
+                          ? Icons.delivery_dining
+                          : Icons.storefront,
                       size: 16,
                       color: Colors.grey[700],
                     ),
                     const SizedBox(width: 8),
                     Text(
                       orderType,
-                      style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          color: Colors.grey[800],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500),
                     ),
                     const Spacer(),
-                    const Text('Tap for details', style: TextStyle(color: Colors.blue, fontSize: 12)),
+                    const Text('Tap for details',
+                        style: TextStyle(color: Colors.blue, fontSize: 12)),
                     const SizedBox(width: 4),
-                    const Icon(Icons.arrow_forward_ios, size: 10, color: Colors.blue),
+                    const Icon(Icons.arrow_forward_ios,
+                        size: 10, color: Colors.blue),
                   ],
                 ),
               ),
@@ -429,10 +461,14 @@ class OrderDetailsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = orderDoc.data() as Map<String, dynamic>;
     final status = data['status']?.toString() ?? 'unknown';
-    final orderNumber = OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
+    final orderNumber =
+        OrderNumberHelper.getDisplayNumber(data, orderId: orderDoc.id);
     final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
     final double subtotal = (data['subtotal'] as num?)?.toDouble() ?? 0.0;
-    final double deliveryFee = (data['deliveryFee'] as num?)?.toDouble() ?? 0.0;
+    final double deliveryFee =
+        (data['riderPaymentAmount'] as num? ?? data['deliveryFee'] as num?)
+                ?.toDouble() ??
+            0.0;
     final double totalAmount = (data['totalAmount'] as num?)?.toDouble() ?? 0.0;
 
     // Cancellation Details
@@ -457,16 +493,23 @@ class OrderDetailsDialog extends StatelessWidget {
                     children: [
                       Text(
                         'Order #$orderNumber',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple),
                       ),
                       Text(
-                        DateFormat('MMM d, yyyy • h:mm a').format((data['timestamp'] as Timestamp).toDate()),
-                        style: const TextStyle(color: Colors.grey, fontSize: 14),
+                        DateFormat('MMM d, yyyy • h:mm a')
+                            .format((data['timestamp'] as Timestamp).toDate()),
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                     ],
                   ),
                 ),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close)),
               ],
             ),
             const Divider(height: 30),
@@ -486,7 +529,8 @@ class OrderDetailsDialog extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.cancel, color: Colors.red.shade700, size: 20),
+                        Icon(Icons.cancel,
+                            color: Colors.red.shade700, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           'ORDER CANCELLED',
@@ -499,13 +543,16 @@ class OrderDetailsDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     if (cancellationReason != null)
-                      Text('Reason: $cancellationReason', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text('Reason: $cancellationReason',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                     if (rejectedBy != null)
-                      Text('Cancelled by: $rejectedBy', style: const TextStyle(fontSize: 12)),
+                      Text('Cancelled by: $rejectedBy',
+                          style: const TextStyle(fontSize: 12)),
                     if (rejectedAt != null)
                       Text(
                         'Time: ${DateFormat('h:mm a').format(rejectedAt.toDate())}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                   ],
                 ),
@@ -519,7 +566,8 @@ class OrderDetailsDialog extends StatelessWidget {
             _buildDetailRow('Name', data['customerName'] ?? 'N/A'),
             _buildDetailRow('Phone', data['customerPhone'] ?? 'N/A'),
             if (data['Order_type'] == 'delivery')
-              _buildDetailRow('Address', '${data['deliveryAddress']?['street'] ?? ''}, ${data['deliveryAddress']?['city'] ?? ''}'),
+              _buildDetailRow('Address',
+                  '${data['deliveryAddress']?['street'] ?? ''}, ${data['deliveryAddress']?['city'] ?? ''}'),
 
             const SizedBox(height: 20),
 
@@ -527,20 +575,26 @@ class OrderDetailsDialog extends StatelessWidget {
             _buildSectionTitle('Items', Icons.restaurant_menu),
             const SizedBox(height: 8),
             ...items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-                    child: Text('${item['quantity']}x', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Text('${item['quantity']}x',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(item['name'] ?? 'Item')),
+                      Text(
+                          'QAR ${((item['price'] ?? 0) * (item['quantity'] ?? 1)).toStringAsFixed(2)}'),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(item['name'] ?? 'Item')),
-                  Text('QAR ${((item['price'] ?? 0) * (item['quantity'] ?? 1)).toStringAsFixed(2)}'),
-                ],
-              ),
-            )),
+                )),
 
             const SizedBox(height: 20),
             const Divider(),
@@ -549,7 +603,8 @@ class OrderDetailsDialog extends StatelessWidget {
             _buildSummaryRow('Subtotal', subtotal),
             if (deliveryFee > 0) _buildSummaryRow('Delivery Fee', deliveryFee),
             const SizedBox(height: 8),
-            _buildSummaryRow('Total', totalAmount, isBold: true, color: Colors.deepPurple),
+            _buildSummaryRow('Total', totalAmount,
+                isBold: true, color: Colors.deepPurple),
 
             const SizedBox(height: 24),
             SizedBox(
@@ -570,7 +625,11 @@ class OrderDetailsDialog extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Colors.grey[600]),
         const SizedBox(width: 8),
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+        Text(title,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800])),
       ],
     );
   }
@@ -581,21 +640,32 @@ class OrderDetailsDialog extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 80, child: Text('$label:', style: TextStyle(color: Colors.grey[600], fontSize: 13))),
+          SizedBox(
+              width: 80,
+              child: Text('$label:',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13))),
           Expanded(child: Text(value, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, double amount, {bool isBold = false, Color? color}) {
+  Widget _buildSummaryRow(String label, double amount,
+      {bool isBold = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 16 : 14)),
-          Text('QAR ${amount.toStringAsFixed(2)}', style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 16 : 14, color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isBold ? 16 : 14)),
+          Text('QAR ${amount.toStringAsFixed(2)}',
+              style: TextStyle(
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isBold ? 16 : 14,
+                  color: color)),
         ],
       ),
     );

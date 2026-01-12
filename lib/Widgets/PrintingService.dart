@@ -130,10 +130,11 @@ class PrintingService {
         final double subtotal = (order['subtotal'] as num?)?.toDouble() ?? 0.0;
         final double discount =
             (order['discountAmount'] as num?)?.toDouble() ?? 0.0;
-        final double deliveryCharge =
-            (order['deliveryCharge'] as num? ?? order['deliveryFee'] as num?)
-                    ?.toDouble() ??
-                0.0; // ✅ Added Delivery Charge (supports both key names)
+        final double deliveryCharge = (order['riderPaymentAmount'] as num? ??
+                    order['deliveryCharge'] as num? ??
+                    order['deliveryFee'] as num?)
+                ?.toDouble() ??
+            0.0; // ✅ Added Delivery Charge (supports all key names)
         final double totalAmount =
             (order['totalAmount'] as num?)?.toDouble() ?? 0.0;
 

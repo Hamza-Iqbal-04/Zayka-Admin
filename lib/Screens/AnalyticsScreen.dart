@@ -3,7 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import '../utils/responsive_helper.dart'; // ✅ Added
+import '../utils/responsive_helper.dart';
+import '../services/AnalyticsPdfService.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -76,6 +77,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             fontSize: 24,
           ),
         ),
+        actions: const [], // Export button moved to body for better visibility
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: _buildOrderTypeTabs(),
@@ -87,6 +89,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDateRangeSelector(),
+            const SizedBox(height: 16),
+
+            // Prominent Export PDF Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.picture_as_pdf, size: 24),
+                label: const Text(
+                  'Download PDF Report',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 4,
+                  shadowColor: Colors.deepPurple.withOpacity(0.4),
+                ),
+                onPressed: () => _showExportDialog(context),
+              ),
+            ),
             const SizedBox(height: 32),
 
             // Analytics Overview Cards
@@ -146,6 +172,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ],
               ),
             const SizedBox(height: 20),
+            // NEW: Top Delivery Riders Section
+            buildSectionHeader('Top Delivery Riders', Icons.delivery_dining),
+            const SizedBox(height: 16),
+            _buildTopRidersList(),
+            const SizedBox(height: 32),
+            // NEW: Top Customers Section
+            buildSectionHeader('Top Customers', Icons.people_outline),
+            const SizedBox(height: 16),
+            _buildTopCustomersList(),
           ],
         ),
       ),
@@ -199,118 +234,167 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   Widget _buildDateRangeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      // ... existing code ...
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade600],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.deepPurple.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+    return Column(
+      children: [
+        // Quick Presets Row
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildDatePresetChip('Last 24h', const Duration(hours: 24)),
+              const SizedBox(width: 8),
+              _buildDatePresetChip('Last 7 Days', const Duration(days: 7)),
+              const SizedBox(width: 8),
+              _buildDatePresetChip('Last 15 Days', const Duration(days: 15)),
+              const SizedBox(width: 8),
+              _buildDatePresetChip('Last 30 Days', const Duration(days: 30)),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        // ... existing code ...
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                // ... existing code ...
-                final newRange = await showDateRangePicker(
-                  context: context,
-                  initialDateRange: _dateRange,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now().add(const Duration(days: 1)),
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: const ColorScheme.light(
-                          primary: Colors.deepPurple,
-                          onPrimary: Colors.white,
-                          onSurface: Colors.black87,
+        ),
+        const SizedBox(height: 16),
+        // Custom Date Range Selector
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade600],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.deepPurple.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () async {
+                    final newRange = await showDateRangePicker(
+                      context: context,
+                      initialDateRange: _dateRange,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 1)),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Colors.deepPurple,
+                              onPrimary: Colors.white,
+                              onSurface: Colors.black87,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (newRange != null) {
+                      setState(() {
+                        _dateRange = DateTimeRange(
+                          start: newRange.start,
+                          end: DateTime(newRange.end.year, newRange.end.month,
+                              newRange.end.day, 23, 59, 59),
+                        );
+                      });
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Custom Range',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${DateFormat('MMM dd, yyyy').format(_dateRange.start)} - ${DateFormat('MMM dd, yyyy').format(_dateRange.end)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: child!,
-                    );
-                  },
-                );
-                if (newRange != null) {
-                  setState(() {
-                    _dateRange = DateTimeRange(
-                      start: newRange.start,
-                      end: DateTime(newRange.end.year, newRange.end.month,
-                          newRange.end.day, 23, 59, 59),
-                    );
-                  });
-                }
-              },
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today_outlined,
-                      color: Colors.white, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Date Range',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${DateFormat('MMM dd, yyyy').format(_dateRange.start)} - ${DateFormat('MMM dd, yyyy').format(_dateRange.end)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          // ... existing code ...
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _dateRange = DateTimeRange(
-                    start: DateTime.now().subtract(const Duration(days: 7)),
-                    end: DateTime.now(),
-                  );
-                });
-              },
-              child: const Icon(
-                Icons.refresh_rounded,
-                color: Colors.white,
-                size: 20,
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _dateRange = DateTimeRange(
+                        start: DateTime.now().subtract(const Duration(days: 7)),
+                        end: DateTime.now(),
+                      );
+                    });
+                  },
+                  child: const Icon(
+                    Icons.refresh_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDatePresetChip(String label, Duration duration) {
+    final now = DateTime.now();
+    final presetStart = now.subtract(duration);
+    final isSelected = _dateRange.start.day == presetStart.day &&
+        _dateRange.start.month == presetStart.month &&
+        _dateRange.start.year == presetStart.year;
+
+    return ActionChip(
+      label: Text(label),
+      backgroundColor: isSelected ? Colors.deepPurple : Colors.grey[200],
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.deepPurple,
+        fontWeight: FontWeight.w600,
+        fontSize: 12,
       ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
+        ),
+      ),
+      onPressed: () {
+        setState(() {
+          _dateRange = DateTimeRange(
+            start: presetStart,
+            end: now,
+          );
+        });
+      },
     );
   }
 
@@ -931,6 +1015,715 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         return 'Dine In';
       default:
         return 'Other';
+    }
+  }
+
+  Widget _buildTopRidersList() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: StreamBuilder<QuerySnapshot>(
+          // Simplified query - filter Order_type programmatically to avoid index issues
+          stream: FirebaseFirestore.instance
+              .collection('Orders')
+              .where('timestamp',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
+              .where('timestamp',
+                  isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return _buildEmptyState(
+                icon: Icons.error_outline,
+                message: 'Error loading data: ${snapshot.error}',
+              );
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.delivery_dining_outlined,
+                message: 'No delivery data for this range.',
+              );
+            }
+
+            // Aggregate by riderId - only count delivery orders with assigned riders
+            final riderCounts = <String, int>{};
+            for (var doc in snapshot.data!.docs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final orderType =
+                  (data['Order_type'] as String?)?.toLowerCase() ?? '';
+              // Only count delivery orders
+              if (orderType != 'delivery') continue;
+
+              final riderId = data['riderId'] as String?;
+              if (riderId != null && riderId.isNotEmpty) {
+                riderCounts.update(riderId, (v) => v + 1, ifAbsent: () => 1);
+              }
+            }
+
+            if (riderCounts.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.delivery_dining_outlined,
+                message: 'No rider data available.',
+              );
+            }
+
+            final sortedRiders = riderCounts.entries.toList()
+              ..sort((a, b) => b.value.compareTo(a.value));
+            final topRiders = sortedRiders.take(5).toList();
+
+            // Fetch rider names from Drivers collection
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchRiderNames(topRiders),
+              builder: (context, riderSnapshot) {
+                if (riderSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final ridersWithNames = riderSnapshot.data ?? [];
+
+                if (ridersWithNames.isEmpty) {
+                  return _buildEmptyState(
+                    icon: Icons.delivery_dining_outlined,
+                    message: 'Could not load rider data.',
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: ridersWithNames.length,
+                  itemBuilder: (context, index) {
+                    final rider = ridersWithNames[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.blue.shade300,
+                                  Colors.blue.shade500,
+                                ],
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '#${index + 1}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              rider['name'] ?? 'Unknown Rider',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${rider['count']}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              Text(
+                                'deliveries',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchRiderNames(
+      List<MapEntry<String, int>> riderEntries) async {
+    final results = <Map<String, dynamic>>[];
+    for (var entry in riderEntries) {
+      try {
+        final driverDoc = await FirebaseFirestore.instance
+            .collection('Drivers')
+            .doc(entry.key)
+            .get();
+        final name = driverDoc.data()?['name'] as String? ?? 'Unknown Rider';
+        results.add({'name': name, 'count': entry.value, 'id': entry.key});
+      } catch (e) {
+        results.add({
+          'name': 'Rider ${entry.key.substring(0, 6)}...',
+          'count': entry.value,
+          'id': entry.key
+        });
+      }
+    }
+    return results;
+  }
+
+  Widget _buildTopCustomersList() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _getOrdersQuery().snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.people_outline,
+                message: 'No customer data for this range.',
+              );
+            }
+
+            final customerData = <String, Map<String, dynamic>>{};
+            for (var doc in snapshot.data!.docs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final customerName = data['customerName'] as String? ??
+                  data['customer_name'] as String? ??
+                  'Unknown';
+              final amount = (data['totalAmount'] as num?)?.toDouble() ?? 0;
+              customerData.update(
+                customerName,
+                (v) => {
+                  'orderCount': (v['orderCount'] as int) + 1,
+                  'totalSpend': (v['totalSpend'] as double) + amount
+                },
+                ifAbsent: () => {'orderCount': 1, 'totalSpend': amount},
+              );
+            }
+
+            if (customerData.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.people_outline,
+                message: 'No customer data available.',
+              );
+            }
+
+            final sortedCustomers = customerData.entries.toList()
+              ..sort((a, b) => (b.value['orderCount'] as int)
+                  .compareTo(a.value['orderCount'] as int));
+            final topCustomers = sortedCustomers.take(5).toList();
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: topCustomers.length,
+              itemBuilder: (context, index) {
+                final customer = topCustomers[index];
+                final orderCount = customer.value['orderCount'] as int;
+                final totalSpend = customer.value['totalSpend'] as double;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.green.shade300,
+                              Colors.green.shade500,
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '#${index + 1}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              customer.key,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Total Spend: QAR ${totalSpend.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '$orderCount',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.green,
+                            ),
+                          ),
+                          Text(
+                            'orders',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showExportDialog(BuildContext context) async {
+    DateTimeRange reportDateRange = _dateRange;
+    String reportOrderType = _selectedOrderType;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf,
+                      color: Colors.deepPurple, size: 28),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Export PDF Report',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Configure your report settings below.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Date Range Selection
+                  const Text(
+                    'Date Range',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDateRangePicker(
+                        context: context,
+                        initialDateRange: reportDateRange,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: Colors.deepPurple,
+                                onPrimary: Colors.white,
+                                onSurface: Colors.black87,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          reportDateRange = DateTimeRange(
+                            start: picked.start,
+                            end: DateTime(picked.end.year, picked.end.month,
+                                picked.end.day, 23, 59, 59),
+                          );
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.deepPurple.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_month,
+                              color: Colors.deepPurple),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              '${DateFormat('MMM dd, yyyy').format(reportDateRange.start)} - ${DateFormat('MMM dd, yyyy').format(reportDateRange.end)}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                          ),
+                          const Icon(Icons.edit,
+                              size: 18, color: Colors.deepPurple),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Order Type Selection
+                  const Text(
+                    'Order Type',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildOrderTypeChip('all', 'All', reportOrderType, (val) {
+                        setDialogState(() => reportOrderType = val);
+                      }),
+                      _buildOrderTypeChip(
+                          'delivery', 'Delivery', reportOrderType, (val) {
+                        setDialogState(() => reportOrderType = val);
+                      }),
+                      _buildOrderTypeChip(
+                          'takeaway', 'Takeaway', reportOrderType, (val) {
+                        setDialogState(() => reportOrderType = val);
+                      }),
+                      _buildOrderTypeChip('dine_in', 'Dine In', reportOrderType,
+                          (val) {
+                        setDialogState(() => reportOrderType = val);
+                      }),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.download, size: 18),
+                label: const Text('Generate Report'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _generatePdfReportWithParams(
+                      reportDateRange, reportOrderType);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildOrderTypeChip(
+      String value, String label, String selected, Function(String) onSelect) {
+    final isSelected = value == selected;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: Colors.deepPurple,
+      backgroundColor: Colors.grey[200],
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.deepPurple,
+        fontWeight: FontWeight.w600,
+      ),
+      onSelected: (_) => onSelect(value),
+    );
+  }
+
+  Future<void> _generatePdfReportWithParams(
+      DateTimeRange reportDateRange, String reportOrderType) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(color: Colors.deepPurple),
+      ),
+    );
+
+    try {
+      // Build query with passed parameters
+      Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+          .collection('Orders')
+          .where('timestamp',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(reportDateRange.start))
+          .where('timestamp',
+              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end))
+          .orderBy('timestamp', descending: true);
+
+      if (reportOrderType != 'all') {
+        query = query.where('Order_type', isEqualTo: reportOrderType);
+      }
+
+      final ordersSnapshot = await query.get();
+      final orders = ordersSnapshot.docs;
+
+      // Calculate KPIs
+      final totalOrders = orders.length;
+      final totalRevenue = orders.fold<double>(
+        0,
+        (sum, doc) {
+          final data = doc.data();
+          return sum + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
+        },
+      );
+      final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+      // Aggregate top items
+      final itemCounts = <String, int>{};
+      final itemRevenue = <String, double>{};
+      for (var doc in orders) {
+        final data = doc.data();
+        final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+        for (var item in items) {
+          final itemName = item['name'] ?? 'Unknown Item';
+          final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
+          final price = (item['price'] as num?)?.toDouble() ?? 0;
+          itemCounts.update(itemName, (v) => v + quantity,
+              ifAbsent: () => quantity);
+          itemRevenue.update(itemName, (v) => v + (price * quantity),
+              ifAbsent: () => price * quantity);
+        }
+      }
+      final topItems = itemCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final topItemsList = topItems
+          .take(10)
+          .map((e) => {
+                'name': e.key,
+                'quantity': e.value,
+                'revenue': itemRevenue[e.key] ?? 0,
+              })
+          .toList();
+
+      // Aggregate order type distribution
+      final orderTypeCounts = <String, int>{
+        'delivery': 0,
+        'takeaway': 0,
+        'pickup': 0,
+        'dine_in': 0
+      };
+      for (var doc in orders) {
+        final data = doc.data();
+        final rawType =
+            (data['Order_type'] as String?)?.toLowerCase().trim() ?? 'unknown';
+        String normalizedKey;
+        if (rawType == 'delivery')
+          normalizedKey = 'delivery';
+        else if (rawType == 'takeaway' || rawType == 'take_away')
+          normalizedKey = 'takeaway';
+        else if (rawType == 'pickup')
+          normalizedKey = 'pickup';
+        else if (rawType == 'dine_in')
+          normalizedKey = 'dine_in';
+        else
+          normalizedKey = 'unknown';
+        if (orderTypeCounts.containsKey(normalizedKey)) {
+          orderTypeCounts[normalizedKey] = orderTypeCounts[normalizedKey]! + 1;
+        }
+      }
+
+      // Aggregate top riders (for delivery orders) using riderId
+      final riderIdCounts = <String, int>{};
+      for (var doc in orders) {
+        final data = doc.data();
+        final riderId = data['riderId'] as String?;
+        if (riderId != null && riderId.isNotEmpty) {
+          riderIdCounts.update(riderId, (v) => v + 1, ifAbsent: () => 1);
+        }
+      }
+      final topRiderIds = riderIdCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // Fetch rider names from Drivers collection
+      final topRidersList = <Map<String, dynamic>>[];
+      for (var entry in topRiderIds.take(5)) {
+        try {
+          final driverDoc = await FirebaseFirestore.instance
+              .collection('Drivers')
+              .doc(entry.key)
+              .get();
+          final name = driverDoc.data()?['name'] as String? ?? 'Unknown Rider';
+          topRidersList.add({'name': name, 'count': entry.value});
+        } catch (e) {
+          topRidersList.add({
+            'name': 'Rider ${entry.key.substring(0, 6)}...',
+            'count': entry.value
+          });
+        }
+      }
+
+      // Aggregate top customers
+      final customerData = <String, Map<String, dynamic>>{};
+      for (var doc in orders) {
+        final data = doc.data();
+        final customerName = data['customerName'] as String? ??
+            data['customer_name'] as String? ??
+            'Unknown';
+        final amount = (data['totalAmount'] as num?)?.toDouble() ?? 0;
+        customerData.update(
+          customerName,
+          (v) => {
+            'orderCount': (v['orderCount'] as int) + 1,
+            'totalSpend': (v['totalSpend'] as double) + amount
+          },
+          ifAbsent: () => {'orderCount': 1, 'totalSpend': amount},
+        );
+      }
+      final topCustomers = customerData.entries.toList()
+        ..sort((a, b) => (b.value['orderCount'] as int)
+            .compareTo(a.value['orderCount'] as int));
+      final topCustomersList = topCustomers
+          .take(5)
+          .map((e) => {
+                'name': e.key,
+                'orderCount': e.value['orderCount'],
+                'totalSpend': e.value['totalSpend'],
+              })
+          .toList();
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Generate PDF
+      await AnalyticsPdfService.generateReport(
+        context: context,
+        reportTitle: reportOrderType == 'all'
+            ? 'Full Analytics Report'
+            : '${_formatOrderTypeForPieLabel(reportOrderType)} Report',
+        dateRange: reportDateRange,
+        orderType: reportOrderType,
+        totalOrders: totalOrders,
+        totalRevenue: totalRevenue,
+        avgOrderValue: avgOrderValue,
+        topItems: topItemsList,
+        orderTypeDistribution: orderTypeCounts,
+        topRiders: topRidersList.isNotEmpty ? topRidersList : null,
+        topCustomers: topCustomersList.isNotEmpty ? topCustomersList : null,
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
