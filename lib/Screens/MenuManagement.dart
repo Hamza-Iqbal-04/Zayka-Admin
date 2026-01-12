@@ -1207,7 +1207,7 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
               mainAxisSpacing:
                   16, // Use mainAxisSpacing for vertical gaps in GridView
               childAspectRatio:
-                  0.8, // Adjusted specifically for menu item cards with images
+                  0.75, // Adjusted specifically for menu item cards with images
             ),
             itemCount: filteredDocs.length,
             itemBuilder: (context, index) {
@@ -1510,46 +1510,68 @@ class _MenuItemCard extends StatelessWidget {
                   spacing: 8.0,
                   runSpacing: 8.0,
                   crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.start,
                   children: [
-                    if (variants.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: Colors.blue.withOpacity(0.2)),
-                        ),
-                        child: Text(
-                          '${variants.length} ${variants.length > 1 ? "Variants" : "Variant"}',
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ...tags.entries.where((e) => e.value == true).map((entry) {
+                    // Combined list for display
+                    ...[
+                      if (variants.isNotEmpty)
+                        {
+                          'label':
+                              '${variants.length} ${variants.length > 1 ? "Variants" : "Variant"}',
+                          'type': 'variant'
+                        },
+                      ...tags.entries
+                          .where((e) => e.value == true)
+                          .map((e) => {'label': e.key, 'type': 'tag'}),
+                    ].take(3).map((item) {
+                      final isVariant = item['type'] == 'variant';
                       return Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.deepPurple.withOpacity(0.1),
+                          color: isVariant
+                              ? Colors.blue.withOpacity(0.1)
+                              : Colors.deepPurple.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: Colors.deepPurple.withOpacity(0.2)),
+                              color: isVariant
+                                  ? Colors.blue.withOpacity(0.2)
+                                  : Colors.deepPurple.withOpacity(0.2)),
                         ),
                         child: Text(
-                          entry.key,
+                          item['label'] as String,
                           style: TextStyle(
-                            color: Colors.deepPurple.shade700,
+                            color: isVariant
+                                ? Colors.blue.shade700
+                                : Colors.deepPurple.shade700,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       );
                     }),
+                    // Remaining count indicator
+                    if ((variants.isNotEmpty ? 1 : 0) +
+                            tags.entries.where((e) => e.value == true).length >
+                        3)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: Colors.grey.withOpacity(0.2)),
+                        ),
+                        child: Text(
+                          '+${((variants.isNotEmpty ? 1 : 0) + tags.entries.where((e) => e.value == true).length) - 3}',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     if (isOutOfStock)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1580,68 +1602,92 @@ class _MenuItemCard extends StatelessWidget {
                   ],
                 ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isAvailable
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isAvailable
-                            ? Colors.green.withOpacity(0.3)
-                            : Colors.red.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isAvailable
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_off,
-                          size: 16,
-                          color: isAvailable ? Colors.green : Colors.red,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isAvailable ? 'AVAILABLE' : 'UNAVAILABLE',
-                          style: TextStyle(
-                            color: isAvailable ? Colors.green : Colors.red,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+              SizedBox(
+                height: 48,
+                child: Row(
+                  children: [
+                    // Invisible dummy switch for balancing centering
+                    IgnorePointer(
+                      child: Opacity(
+                        opacity: 0.0,
+                        child: Transform.scale(
+                          scale: 0.8,
+                          child: Switch(
+                            value: isAvailable,
+                            onChanged:
+                                (v) {}, // Dummy callback for size matching
+                            activeColor: Colors.transparent,
+                            inactiveThumbColor: Colors.transparent,
+                            inactiveTrackColor: Colors.transparent,
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: isAvailable,
-                      onChanged: (value) async {
-                        await item.reference.update({'isAvailable': value});
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Item ${value ? 'activated' : 'deactivated'}!',
-                              ),
-                              backgroundColor: Colors.green,
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isAvailable
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isAvailable
+                                  ? Colors.green.withOpacity(0.3)
+                                  : Colors.red.withOpacity(0.3),
                             ),
-                          );
-                        }
-                      },
-                      activeColor: Colors.green,
-                      inactiveThumbColor: Colors.red,
-                      inactiveTrackColor: Colors.red.withOpacity(0.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isAvailable
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                size: 16,
+                                color: isAvailable ? Colors.green : Colors.red,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isAvailable ? 'AVAILABLE' : 'UNAVAILABLE',
+                                style: TextStyle(
+                                  color:
+                                      isAvailable ? Colors.green : Colors.red,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Switch(
+                        value: isAvailable,
+                        onChanged: (value) async {
+                          await item.reference.update({'isAvailable': value});
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Item ${value ? 'activated' : 'deactivated'}!',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        activeColor: Colors.green,
+                        inactiveThumbColor: Colors.red,
+                        inactiveTrackColor: Colors.red.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -1655,8 +1701,8 @@ class _MenuItemCard extends StatelessWidget {
                     onPressed: () => _showMenuItemDetails(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.deepPurple,
-                      side: BorderSide(
-                          color: Colors.deepPurple.withOpacity(0.5)),
+                      side:
+                          BorderSide(color: Colors.deepPurple.withOpacity(0.5)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
