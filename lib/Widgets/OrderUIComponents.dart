@@ -2,6 +2,7 @@
 // Shared UI components and utilities for Order-related screens
 // Consolidates duplicated code from DashboardScreen and OrdersScreen
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -20,13 +21,13 @@ class StatusUtils {
       case 'preparing':
         return Colors.teal;
       case 'prepared':
-        return Colors.teal.shade600;     // NEW: Slightly darker teal
+        return Colors.teal.shade600; // NEW: Slightly darker teal
       case 'served':
-        return Colors.green.shade600;    // NEW: Served to table
+        return Colors.green.shade600; // NEW: Served to table
       case 'paid':
-        return Colors.blue.shade700;     // NEW: Payment complete
+        return Colors.blue.shade700; // NEW: Payment complete
       case 'collected':
-        return Colors.green.shade700;    // NEW: Pickup collected
+        return Colors.green.shade700; // NEW: Pickup collected
       case 'rider_assigned':
         return Colors.purple;
       case 'needs_rider_assignment':
@@ -108,12 +109,15 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = StatusUtils.getColorForOrderType(status, orderType ?? 'delivery');
-    final displayText = StatusUtils.getDisplayText(status, orderType: orderType);
+    final color =
+        StatusUtils.getColorForOrderType(status, orderType ?? 'delivery');
+    final displayText =
+        StatusUtils.getDisplayText(status, orderType: orderType);
     final fontSize = StatusUtils.getFontSize(status, orderType: orderType);
 
     return Container(
-      constraints: maxWidth != null ? BoxConstraints(maxWidth: maxWidth!) : null,
+      constraints:
+          maxWidth != null ? BoxConstraints(maxWidth: maxWidth!) : null,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
@@ -337,7 +341,11 @@ class OrderSectionHeader extends StatelessWidget {
 /// Utility class for network-aware operations
 class NetworkUtils {
   /// Check if device has network connectivity
+  /// Note: connectivity_plus doesn't work reliably on web, so we skip the check on web
   static Future<bool> hasConnectivity() async {
+    // ✅ Skip connectivity check on web - it's unreliable and causes false negatives
+    if (kIsWeb) return true;
+
     final result = await Connectivity().checkConnectivity();
     return !result.contains(ConnectivityResult.none);
   }
@@ -357,11 +365,12 @@ class NetworkUtils {
   /// Get user-friendly error message from exception
   static String getUserFriendlyError(dynamic error) {
     final errorStr = error.toString().toLowerCase();
-    
+
     if (errorStr.contains('permission') || errorStr.contains('denied')) {
       return 'You don\'t have permission to perform this action.';
     }
-    if (errorStr.contains('network') || errorStr.contains('timeout') || 
+    if (errorStr.contains('network') ||
+        errorStr.contains('timeout') ||
         errorStr.contains('connection')) {
       return 'Network error. Please check your connection and try again.';
     }
@@ -371,7 +380,7 @@ class NetworkUtils {
     if (errorStr.contains('already')) {
       return 'This order was already updated by another user.';
     }
-    
+
     return 'Failed to update order. Please try again.';
   }
 }
@@ -389,10 +398,10 @@ mixin DebounceActionMixin<T extends StatefulWidget> on State<T> {
     Future<void> Function() action,
   ) async {
     if (_processingActions.contains(actionId)) return;
-    
+
     _processingActions.add(actionId);
     if (mounted) setState(() {});
-    
+
     try {
       await action();
     } finally {
@@ -405,9 +414,9 @@ mixin DebounceActionMixin<T extends StatefulWidget> on State<T> {
 /// Safe data extraction helpers for order documents
 class OrderDataHelper {
   final Map<String, dynamic> data;
-  
+
   OrderDataHelper(this.data);
-  
+
   /// Factory constructor for DocumentSnapshot
   factory OrderDataHelper.fromSnapshot(DocumentSnapshot snapshot) {
     final data = snapshot.data();
@@ -444,9 +453,7 @@ class OrderDataHelper {
   List<Map<String, dynamic>> getItems() {
     final rawItems = data['items'];
     if (rawItems is! List) return [];
-    return rawItems
-        .whereType<Map<String, dynamic>>()
-        .toList();
+    return rawItems.whereType<Map<String, dynamic>>().toList();
   }
 
   /// Get timestamp as DateTime

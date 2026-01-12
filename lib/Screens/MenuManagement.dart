@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'BranchManagement.dart';
 import '../main.dart';
-import '../utils/responsive_helper.dart'; // ✅ Added
+import '../utils/responsive_helper.dart'; // âœ… Added
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -297,7 +297,7 @@ class _CategoriesTabState extends State<_CategoriesTab> {
           );
         }
 
-        // ✅ RESPONSIVE CATEGORIES GRID
+        // âœ… RESPONSIVE CATEGORIES GRID
         if (ResponsiveHelper.isTablet(context) ||
             ResponsiveHelper.isDesktop(context)) {
           return GridView.builder(
@@ -1196,7 +1196,7 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
           );
         }
 
-        // ✅ RESPONSIVE MENU ITEMS GRID
+        // âœ… RESPONSIVE MENU ITEMS GRID
         if (ResponsiveHelper.isTablet(context) ||
             ResponsiveHelper.isDesktop(context)) {
           return GridView.builder(
@@ -1644,25 +1644,26 @@ class _MenuItemCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.visibility_outlined, size: 18),
-                      label: const Text('View Details'),
-                      onPressed: () => _showMenuItemDetails(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.deepPurple,
-                        side: BorderSide(
-                            color: Colors.deepPurple.withOpacity(0.5)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('View'),
+                    onPressed: () => _showMenuItemDetails(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.deepPurple,
+                      side: BorderSide(
+                          color: Colors.deepPurple.withOpacity(0.5)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
                     ),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     label: const Text('Edit'),
@@ -1674,10 +1675,9 @@ class _MenuItemCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 20),
+                          vertical: 12, horizontal: 16),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
@@ -1689,6 +1689,7 @@ class _MenuItemCard extends StatelessWidget {
                       onPressed: onDelete,
                       tooltip: 'Delete Menu Item',
                       padding: const EdgeInsets.all(12),
+                      constraints: const BoxConstraints(),
                     ),
                   ),
                 ],
@@ -2909,7 +2910,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
     final double? discountedPrice =
         double.tryParse(_discountedPriceController.text);
 
-    // ✅ CRITICAL FIX: Prepare the base data map
+    // âœ… CRITICAL FIX: Prepare the base data map
     // We do NOT include 'outOfStockBranches' here for edits to avoid the race condition.
     final data = {
       'name': _nameController.text.trim(),
@@ -2933,7 +2934,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
 
     try {
       if (_isEdit) {
-        // ✅ CRITICAL FIX: Atomic Stock Updates
+        // âœ… CRITICAL FIX: Atomic Stock Updates
         // If we are editing and have a valid branch context, we add atomic operations
         // to the update map instead of overwriting the whole array.
         if (userScope.branchId != null) {

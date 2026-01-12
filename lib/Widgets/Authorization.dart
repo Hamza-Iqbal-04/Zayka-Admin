@@ -15,6 +15,7 @@ class AuthService {
   Future<String?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
+      await _auth.setPersistence(Persistence.LOCAL); // ✅ Ensure persistence
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       return null;
     } on FirebaseAuthException catch (e) {

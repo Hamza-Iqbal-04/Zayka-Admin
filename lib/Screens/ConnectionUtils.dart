@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Utility class to check for actual internet access
@@ -8,7 +9,13 @@ class ConnectionUtils {
   static final Connectivity _connectivity = Connectivity();
 
   /// Checks if there is actual internet access by pinging a reliable server.
+  /// Note: On web platform, dart:io is not supported, so we always return true.
   static Future<bool> hasInternetConnection() async {
+    // ✅ Skip InternetAddress.lookup on web - dart:io is not supported on web
+    if (kIsWeb) {
+      return true; // On web, assume connected (network errors will be handled by Firebase)
+    }
+
     try {
       // Lookup google.com to verify DNS and internet access
       final result = await InternetAddress.lookup('google.com')
@@ -106,28 +113,30 @@ class _OfflineBannerState extends State<OfflineBanner> {
           child: _isOnline
               ? null
               : Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.wifi_off, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              const Text(
-                'No Internet Connection',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 16),
-              SizedBox(
-                height: 24,
-                child: TextButton(
-                  onPressed: _checkConnection,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('RETRY', style: TextStyle(fontSize: 12)),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off, color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'No Internet Connection',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      height: 24,
+                      child: TextButton(
+                        onPressed: _checkConnection,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          foregroundColor: Colors.white,
+                        ),
+                        child:
+                            const Text('RETRY', style: TextStyle(fontSize: 12)),
+                      ),
+                    )
+                  ],
                 ),
-              )
-            ],
-          ),
         ),
       ],
     );

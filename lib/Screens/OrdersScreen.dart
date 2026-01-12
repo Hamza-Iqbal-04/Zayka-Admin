@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -978,10 +978,8 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   Future<void> _handleCancelPress(BuildContext context) async {
-    final List<ConnectivityResult> connectivityResult =
-        await (Connectivity().checkConnectivity());
-
-    if (connectivityResult.contains(ConnectivityResult.none)) {
+    // ✅ Use NetworkUtils which handles web platform properly
+    if (!await NetworkUtils.hasConnectivity()) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1699,7 +1697,9 @@ class _OrderCardState extends State<_OrderCard> {
     final orderNumber =
         OrderNumberHelper.getDisplayNumber(data, orderId: widget.order.id);
     final double subtotal = (data['subtotal'] as num? ?? 0.0).toDouble();
-    final double deliveryFee = (data['deliveryFee'] as num? ?? 0.0).toDouble();
+    final double deliveryFee =
+        (data['deliveryFee'] as num? ?? data['deliveryCharge'] as num? ?? 0.0)
+            .toDouble();
     final double totalAmount = (data['totalAmount'] as num? ?? 0.0).toDouble();
 
     final bool isAutoAssigning =
@@ -1787,7 +1787,11 @@ class _OrderCardState extends State<_OrderCard> {
       showBanner = true;
     }
 
-    return Container(
+    // ✅ On larger screens (tablet/desktop), show popup dialog instead of ExpansionTile
+    final bool isLargeScreen = ResponsiveHelper.isTablet(context) ||
+        ResponsiveHelper.isDesktop(context);
+
+    Widget orderCard = Container(
       clipBehavior:
           Clip.antiAlias, // Ensure banner doesn't overflow rounded corners
       decoration: BoxDecoration(
@@ -2230,6 +2234,25 @@ class _OrderCardState extends State<_OrderCard> {
         ],
       ),
     );
+
+    // ✅ On large screens, wrap with GestureDetector to show popup dialog on tap
+    if (isLargeScreen) {
+      return GestureDetector(
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => _OrderPopupDialog(order: widget.order),
+          );
+        },
+        child: AbsorbPointer(
+          absorbing:
+              true, // Prevent ExpansionTile from expanding on large screens
+          child: orderCard,
+        ),
+      );
+    }
+
+    return orderCard;
   }
 }
 

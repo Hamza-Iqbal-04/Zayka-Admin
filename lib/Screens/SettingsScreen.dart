@@ -1509,15 +1509,20 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                         return const SizedBox.shrink();
 
                       final data = staff.data() as Map<String, dynamic>;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8), // Adjusted padding
-                        child: _StaffCard(
-                          staffId: staff.id,
-                          data: data,
-                          isSelf: false,
-                          onEdit: () =>
-                              _showEditStaffDialog(staff.id, data, false),
+                      return Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 600),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            child: _StaffCard(
+                              staffId: staff.id,
+                              data: data,
+                              isSelf: false,
+                              onEdit: () =>
+                                  _showEditStaffDialog(staff.id, data, false),
+                            ),
+                          ),
                         ),
                       );
                     },

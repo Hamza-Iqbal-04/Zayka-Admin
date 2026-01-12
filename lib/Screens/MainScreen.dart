@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       String restaurantName = "Branch ${scopeService.branchId}";
       if (scopeService.userEmail.isNotEmpty) {
         restaurantName =
-        "Restaurant (${scopeService.userEmail.split('@').first})";
+            "Restaurant (${scopeService.userEmail.split('@').first})";
       }
 
       statusService.initialize(scopeService.branchId,
@@ -168,14 +168,17 @@ class _HomeScreenState extends State<HomeScreen> {
               // The schedule timer will automatically close the restaurant in a few minutes.
               Navigator.pop(context);
             },
-            child: const Text('Okay, Let it Close', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text('Okay, Let it Close',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const RestaurantTimingScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const RestaurantTimingScreen()),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
@@ -188,7 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRestaurantToggle(RestaurantStatusService statusService) {
     final userScope = context.read<UserScopeService>();
-    final hasMultipleBranches = userScope.isSuperAdmin && userScope.branchIds.length > 1;
+    final hasMultipleBranches =
+        userScope.isSuperAdmin && userScope.branchIds.length > 1;
 
     return Stack(
       alignment: Alignment.center,
@@ -205,7 +209,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepPurple),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.deepPurple),
               ),
             ),
           )
@@ -216,8 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: statusService.isManualOpen 
-                    ? Colors.green.withOpacity(0.15) 
+                color: statusService.isManualOpen
+                    ? Colors.green.withOpacity(0.15)
                     : Colors.red.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
@@ -229,12 +234,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    statusService.isManualOpen ? Icons.power_settings_new : Icons.power_off,
-                    color: statusService.isManualOpen ? Colors.green : Colors.red,
+                    statusService.isManualOpen
+                        ? Icons.power_settings_new
+                        : Icons.power_off,
+                    color:
+                        statusService.isManualOpen ? Colors.green : Colors.red,
                     size: 18,
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down, size: 18, color: Colors.grey),
+                  const Icon(Icons.arrow_drop_down,
+                      size: 18, color: Colors.grey),
                 ],
               ),
             ),
@@ -264,10 +273,10 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _BranchStatusToggleSheet(branchIds: userScope.branchIds),
+      builder: (context) =>
+          _BranchStatusToggleSheet(branchIds: userScope.branchIds),
     );
   }
-
 
   void _showStatusChangeConfirmation(bool newValue) {
     final statusService = context.read<RestaurantStatusService>();
@@ -297,12 +306,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RestaurantTimingScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const RestaurantTimingScreen()),
                 );
               },
               icon: const Icon(Icons.edit_calendar, size: 16),
               label: const Text('Update Timings'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
             ),
           ],
         ),
@@ -333,13 +344,16 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () async {
                 Navigator.pop(context);
                 try {
-                   // Proceed with closing
-                   await statusService.toggleRestaurantStatus(false);
-                   if (mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       const SnackBar(content: Text('🛑 Restaurant is now CLOSED (Manual Override)'), backgroundColor: Colors.red),
-                     );
-                   }
+                  // Proceed with closing
+                  await statusService.toggleRestaurantStatus(false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text(
+                              '🛑 Restaurant is now CLOSED (Manual Override)'),
+                          backgroundColor: Colors.red),
+                    );
+                  }
                 } catch (e) {
                   // Error handling
                 }
@@ -480,8 +494,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final String appBarTitle = userScope.isSuperAdmin
         ? 'Super Admin'
         : userScope.branchId.isNotEmpty
-        ? userScope.branchId.replaceAll('_', ' ')
-        : 'Admin Panel';
+            ? userScope.branchId.replaceAll('_', ' ')
+            : 'Admin Panel';
 
     if (_navItems.isEmpty || _screens.isEmpty) {
       return const Scaffold(
@@ -507,13 +521,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepPurple),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.deepPurple),
                     ),
                   )
                 else
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusService.isOpen
                           ? Colors.green.withOpacity(0.1)
@@ -566,11 +581,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Closing in ${_formatDuration(timeUntilClose)}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -656,7 +673,6 @@ class BadgeCountProvider with ChangeNotifier {
     _currentBranchId = branchId;
     _subscription?.cancel();
 
-    // ✅ FIX: Added Order_type filter - only delivery orders need rider assignment
     Query query = FirebaseFirestore.instance
         .collection('Orders')
         .where('status', isEqualTo: 'needs_rider_assignment')
@@ -667,7 +683,20 @@ class BadgeCountProvider with ChangeNotifier {
     }
 
     _subscription = query.snapshots().listen((snapshot) {
-      final newCount = snapshot.docs.length;
+      // ✅ Client-side filter for TODAY's orders only
+      // This avoids complex Firestore composite indexes while meeting user requirement
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+
+      final todayDocs = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final timestamp = data['timestamp'] as Timestamp?;
+        if (timestamp == null) return false;
+        return timestamp.toDate().isAfter(startOfDay) ||
+            timestamp.toDate().isAtSameMomentAs(startOfDay);
+      }).toList();
+
+      final newCount = todayDocs.length;
 
       if (newCount != _manualAssignmentCount) {
         debugPrint(
@@ -694,11 +723,12 @@ class BadgeCountProvider with ChangeNotifier {
 // ✅ NEW: Branch status toggle sheet for SuperAdmin
 class _BranchStatusToggleSheet extends StatefulWidget {
   final List<String> branchIds;
-  
+
   const _BranchStatusToggleSheet({required this.branchIds});
-  
+
   @override
-  State<_BranchStatusToggleSheet> createState() => _BranchStatusToggleSheetState();
+  State<_BranchStatusToggleSheet> createState() =>
+      _BranchStatusToggleSheetState();
 }
 
 class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
@@ -721,14 +751,17 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
       });
       return;
     }
-    
+
     try {
       // Load only assigned branches
       final List<Map<String, dynamic>> loadedBranches = [];
-      
+
       for (final branchId in widget.branchIds) {
         try {
-          final doc = await FirebaseFirestore.instance.collection('Branch').doc(branchId).get();
+          final doc = await FirebaseFirestore.instance
+              .collection('Branch')
+              .doc(branchId)
+              .get();
           if (doc.exists) {
             final data = doc.data()!;
             loadedBranches.add({
@@ -744,7 +777,7 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
           debugPrint('Error loading branch $branchId: $e');
         }
       }
-      
+
       setState(() {
         _branches = loadedBranches;
         _isLoading = false;
@@ -759,14 +792,25 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
     setState(() => _togglingIds.add(branchId));
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('Branch').doc(branchId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('Branch')
+          .doc(branchId)
+          .get();
       final data = doc.data() ?? {};
       final workingHours = data['workingHours'] as Map<String, dynamic>? ?? {};
-      
+
       bool isScheduleOpen = false;
       if (workingHours.isNotEmpty) {
         final now = DateTime.now();
-        final dayName = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][now.weekday - 1];
+        final dayName = [
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+          'sunday'
+        ][now.weekday - 1];
         final daySchedule = workingHours[dayName];
         if (daySchedule != null && daySchedule['isOpen'] == true) {
           isScheduleOpen = true;
@@ -786,7 +830,10 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
         updateData['manuallyClosed'] = false;
       }
 
-      await FirebaseFirestore.instance.collection('Branch').doc(branchId).update(updateData);
+      await FirebaseFirestore.instance
+          .collection('Branch')
+          .doc(branchId)
+          .update(updateData);
 
       setState(() {
         final index = _branches.indexWhere((b) => b['id'] == branchId);
@@ -797,7 +844,8 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
+          content:
+              Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
           backgroundColor: newStatus ? Colors.green : Colors.orange,
           duration: const Duration(seconds: 1),
         ),
@@ -845,7 +893,8 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
           const Divider(),
           const SizedBox(height: 8),
           if (_isLoading)
-            const Center(child: Padding(
+            const Center(
+                child: Padding(
               padding: EdgeInsets.all(20),
               child: CircularProgressIndicator(),
             ))
@@ -907,7 +956,8 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
                             )
                           : Switch(
                               value: isOpen,
-                              onChanged: (val) => _toggleBranch(branch['id'], val),
+                              onChanged: (val) =>
+                                  _toggleBranch(branch['id'], val),
                               activeColor: Colors.green,
                               inactiveThumbColor: Colors.red,
                             ),

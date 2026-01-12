@@ -416,10 +416,11 @@ class _BranchTableCard extends StatelessWidget {
                         shrinkWrap: true,
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount:
-                              ResponsiveHelper.isDesktop(context) ? 4 : 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 2.0,
+                              ResponsiveHelper.isDesktop(context) ? 3 : 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          // ✅ Adjusted aspect ratio to 1.5 to prevent content squishing
+                          childAspectRatio: 1.5,
                         ),
                         itemCount: tables.length,
                         itemBuilder: (context, index) {
@@ -816,6 +817,11 @@ class _TableListItem extends StatelessWidget {
         statusBgColor = Colors.blue.withOpacity(0.1);
         statusIcon = Icons.bookmark_rounded;
         break;
+      case 'ordered':
+        statusColor = Colors.purple;
+        statusBgColor = Colors.purple.withOpacity(0.1);
+        statusIcon = Icons.restaurant_menu_rounded;
+        break;
       default:
         statusColor = Colors.grey;
         statusBgColor = Colors.grey.withOpacity(0.1);
@@ -829,96 +835,114 @@ class _TableListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: statusBgColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(statusIcon, color: statusColor, size: 24),
-        ),
-        title: Text(
-          'Table $tableId',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      // ✅ REPLACED ListTile with custom Row for proper large screen layout
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Leading status icon
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: statusBgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(statusIcon, color: statusColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            // Title and subtitle - takes remaining space
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chair_rounded, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$seats seats',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  Flexible(
+                    child: Text(
+                      'Table $tableId',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // ✅ Use Wrap to prevent overflow on small screens
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chair_rounded,
+                              size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$seats seats',
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusBgColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status.toUpperCase(),
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(width: 16),
+            // Action buttons - fixed size, won't squish
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Material(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _showEditTableDialog(context),
+                    child: const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Icon(Icons.edit_rounded,
+                          color: Colors.blue, size: 20),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        trailing: SizedBox(
-          width: 100,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.edit_rounded,
-                        color: Colors.blue, size: 18),
-                    onPressed: () => _showEditTableDialog(context),
-                    tooltip: 'Edit Table',
-                    padding: const EdgeInsets.all(6),
+                const SizedBox(width: 8),
+                Material(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _confirmDelete(context),
+                    child: const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Icon(Icons.delete_rounded,
+                          color: Colors.red, size: 20),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.delete_rounded,
-                        color: Colors.red, size: 18),
-                    onPressed: () => _confirmDelete(context),
-                    tooltip: 'Delete Table',
-                    padding: const EdgeInsets.all(6),
-                  ),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );

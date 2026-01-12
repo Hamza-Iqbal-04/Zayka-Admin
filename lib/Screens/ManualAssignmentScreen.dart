@@ -63,6 +63,15 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
     if (reason != null && reason.trim().isNotEmpty) {
       if (!mounted) return;
 
+      // Show Loading Dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.deepPurple),
+        ),
+      );
+
       try {
         await FirebaseFirestore.instance
             .collection('Orders')
@@ -71,10 +80,11 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
           'status': 'cancelled',
           'cancellationReason': reason,
           'cancelledAt': FieldValue.serverTimestamp(),
-          'cancelledBy': 'Admin Integration', // Or user email if available
+          'cancelledBy': 'Admin Integration',
         });
 
         if (mounted) {
+          Navigator.pop(context); // Dismiss Loading
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Order cancelled successfully'),
@@ -84,6 +94,7 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
         }
       } catch (e) {
         if (mounted) {
+          Navigator.pop(context); // Dismiss Loading
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to cancel order: $e'),
@@ -107,14 +118,13 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
       }
     });
 
-    // ✅ FIX: REMOVED DATE FILTER
-    // This ensures the screen displays ALL orders that need assignment,
-    // matching the Badge Count and preventing hidden tasks.
-    // ✅ FIX: Added Order_type filter - only delivery orders need rider assignment
+    // ✅ Show ALL pending assignments (not just today) to match badge count
+    // and ensure no tasks are lost.
     Query query = FirebaseFirestore.instance
         .collection('Orders')
         .where('status', isEqualTo: 'needs_rider_assignment')
-        .where('Order_type', isEqualTo: 'delivery');
+        .where('Order_type', isEqualTo: 'delivery')
+        .orderBy('timestamp', descending: true);
 
     // Filter by branch logic (BranchAdmin OR SuperAdmin with selection)
     final filterBranchIds =
@@ -215,7 +225,19 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
             );
           }
 
-          final docs = snapshot.data!.docs;
+          final allDocs = snapshot.data!.docs;
+
+          // ✅ Client-side filter for TODAY ONLY
+          final now = DateTime.now();
+          final startOfDay = DateTime(now.year, now.month, now.day);
+
+          final docs = allDocs.where((doc) {
+            final data = doc.data();
+            final timestamp = data['timestamp'] as Timestamp?;
+            if (timestamp == null) return false;
+            return timestamp.toDate().isAfter(startOfDay) ||
+                timestamp.toDate().isAtSameMomentAs(startOfDay);
+          }).toList();
 
           // Sort in-memory (Newest first)
           try {
@@ -231,6 +253,35 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
             });
           } catch (e) {
             debugPrint("Error sorting documents: $e");
+          }
+
+          if (docs.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline,
+                      size: 64, color: Colors.green[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'All Caught Up!',
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "No orders from today need assignment.",
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           // ✅ RESPONSIVE UPDATE

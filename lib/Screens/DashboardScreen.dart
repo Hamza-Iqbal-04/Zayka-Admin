@@ -330,7 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _navigateToRiders(BuildContext context) {
-    widget.onTabChange(3);
+    widget.onTabChange(4); // Changed from 3 to 4 to target Riders tab
   }
 
   void _navigateToMenuManagement(BuildContext context) {
@@ -590,7 +590,7 @@ class _EnhancedStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 140,
+      // ✅ Removed fixed height: 140 to prevent conflict with GridView aspect ratio
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [color.withOpacity(0.8), color],
@@ -613,7 +613,8 @@ class _EnhancedStatCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            // ✅ Reduced padding to 12.0 to give more breathing room on small screens
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -636,12 +637,15 @@ class _EnhancedStatCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                // ✅ Use flexible space instead of fixed SizedBox
+                const Spacer(),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // Wrap content tightly
                   children: [
                     FittedBox(
                       fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
                       child: Text(
                         value,
                         style: const TextStyle(
@@ -653,15 +657,18 @@ class _EnhancedStatCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
+                    Flexible(
+                      // ✅ Allow title to shrink if needed
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -680,7 +687,7 @@ class _EnhancedLoadingStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 140,
+      // Removed fixed height: 140
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(16),
@@ -702,7 +709,7 @@ class _EnhancedErrorStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 140,
+      // Removed fixed height: 140
       decoration: BoxDecoration(
         color: Colors.red[50],
         borderRadius: BorderRadius.circular(16),

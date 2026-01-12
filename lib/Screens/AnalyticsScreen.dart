@@ -47,7 +47,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             _selectedOrderType = 'delivery';
             break;
           case 2:
-            _selectedOrderType = 'take_away';
+            _selectedOrderType = 'takeaway';
             break;
           case 3: // New case for Pickup
             _selectedOrderType = 'pickup';
@@ -201,6 +201,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Widget _buildDateRangeSelector() {
     return Container(
       padding: const EdgeInsets.all(20),
+      // ... existing code ...
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.deepPurple.shade400, Colors.deepPurple.shade600],
@@ -217,10 +218,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         ],
       ),
       child: Row(
+        // ... existing code ...
         children: [
           Expanded(
             child: InkWell(
               onTap: () async {
+                // ... existing code ...
                 final newRange = await showDateRangePicker(
                   context: context,
                   initialDateRange: _dateRange,
@@ -282,6 +285,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               ),
             ),
           ),
+          // ... existing code ...
           const SizedBox(width: 12),
           Container(
             padding: const EdgeInsets.all(8),
@@ -766,7 +770,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
               final orderTypeCounts = <String, int>{
                 'delivery': 0,
-                'take_away': 0,
+                'takeaway': 0,
                 'pickup': 0,
                 'dine_in': 0,
               };
@@ -781,8 +785,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
                 if (cleanedRaw == 'delivery') {
                   normalizedKey = 'delivery';
-                } else if (cleanedRaw == 'take_away') {
-                  normalizedKey = 'take_away';
+                } else if (cleanedRaw == 'takeaway' ||
+                    cleanedRaw == 'take_away') {
+                  normalizedKey = 'takeaway';
                 } else if (cleanedRaw == 'pickup') {
                   // Add check for pickup
                   normalizedKey = 'pickup';
@@ -903,7 +908,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     switch (orderType.toLowerCase()) {
       case 'delivery':
         return Colors.blue.shade600;
-      case 'take_away':
+      case 'takeaway':
         return Colors.orange.shade600;
       case 'pickup': // Add color for pickup
         return Colors.purple.shade600;
@@ -918,7 +923,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     switch (normalizedKey) {
       case 'delivery':
         return 'Delivery';
-      case 'take_away':
+      case 'takeaway':
         return 'Take Away';
       case 'pickup': // Add label for pickup
         return 'Pick Up';

@@ -1589,101 +1589,334 @@ class _DriverDialogState extends State<_DriverDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(_isEdit ? 'Edit Driver' : 'Add Driver'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) => v!.isEmpty ? 'Name is required' : null,
-              ),
-              TextFormField(
-                controller: _emailCtrl,
-                enabled: !_isEdit, // Email is the ID, cannot be edited
-                decoration: const InputDecoration(labelText: 'Email (ID)'),
-                validator: (v) => v!.isEmpty ? 'Email is required' : null,
-              ),
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Phone'),
-                keyboardType: TextInputType.phone,
-              ),
-              TextFormField(
-                controller: _vehicleTypeCtrl,
-                decoration: const InputDecoration(labelText: 'Vehicle Type'),
-              ),
-              TextFormField(
-                controller: _vehicleNumCtrl,
-                decoration: const InputDecoration(labelText: 'Vehicle Number'),
-              ),
-              DropdownButtonFormField<String>(
-                value: _status,
-                decoration: const InputDecoration(labelText: 'Status'),
-                items: ['online', 'offline', 'on_delivery']
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (v) => setState(() => _status = v!),
-              ),
-              SwitchListTile(
-                title: const Text('Is Available'),
-                value: _isAvailable,
-                onChanged: (v) => setState(() => _isAvailable = v),
-              ),
-              TextFormField(
-                controller: _profileImgCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Profile Image URL'),
-              ),
+    // ✅ MODERNIZED DRIVER DIALOG UI
+    final inputDecoration = InputDecoration(
+      filled: true,
+      fillColor: Colors.grey[50],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
 
-              // Use your existing MultiBranchSelector component
-              if (widget.userScope.isSuperAdmin) ...[
-                const SizedBox(height: 16),
-                MultiBranchSelector(
-                  selectedIds: _selectedBranchIds,
-                  onChanged: (selected) {
-                    setState(() {
-                      _selectedBranchIds = selected;
-                    });
-                  },
-                ),
-              ] else ...[
-                // Show read-only branch info for non-super admins
-                ListTile(
-                  leading:
-                      const Icon(Icons.business_sharp, color: Colors.indigo),
-                  title: const Text('Assigned Branch'),
-                  subtitle: Text(
-                    widget.userScope.branchIds.isEmpty
-                        ? 'No branch assigned'
-                        : '${widget.userScope.branchIds.length} branch(es)',
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.delivery_dining,
+                        color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isEdit ? 'Edit Driver' : 'Add New Driver',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _isEdit
+                            ? 'Update driver information'
+                            : 'Fill in driver details below',
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.8), fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Form Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Personal Info Section
+                      Text('Personal Information',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.grey[700])),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _nameCtrl,
+                        decoration: inputDecoration.copyWith(
+                          labelText: 'Full Name',
+                          prefixIcon: const Icon(Icons.person_outline,
+                              color: Colors.deepPurple),
+                        ),
+                        validator: (v) =>
+                            v!.isEmpty ? 'Name is required' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        enabled: !_isEdit,
+                        decoration: inputDecoration.copyWith(
+                          labelText: 'Email (Login ID)',
+                          prefixIcon: const Icon(Icons.email_outlined,
+                              color: Colors.deepPurple),
+                          helperText:
+                              _isEdit ? 'Email cannot be changed' : null,
+                        ),
+                        validator: (v) =>
+                            v!.isEmpty ? 'Email is required' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _phoneCtrl,
+                        decoration: inputDecoration.copyWith(
+                          labelText: 'Phone Number',
+                          prefixIcon: const Icon(Icons.phone_outlined,
+                              color: Colors.deepPurple),
+                        ),
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Vehicle Info Section
+                      Text('Vehicle Information',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.grey[700])),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _vehicleTypeCtrl,
+                              decoration: inputDecoration.copyWith(
+                                labelText: 'Vehicle Type',
+                                prefixIcon: const Icon(Icons.two_wheeler,
+                                    color: Colors.deepPurple),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _vehicleNumCtrl,
+                              decoration: inputDecoration.copyWith(
+                                labelText: 'Plate Number',
+                                prefixIcon: const Icon(Icons.pin,
+                                    color: Colors.deepPurple),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Status Section
+                      Text('Status & Availability',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.grey[700])),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _status,
+                        decoration: inputDecoration.copyWith(
+                          labelText: 'Status',
+                          prefixIcon: const Icon(Icons.signal_wifi_4_bar,
+                              color: Colors.deepPurple),
+                        ),
+                        items: ['online', 'offline', 'on_delivery'].map((s) {
+                          IconData icon;
+                          Color color;
+                          switch (s) {
+                            case 'online':
+                              icon = Icons.check_circle;
+                              color = Colors.green;
+                              break;
+                            case 'offline':
+                              icon = Icons.cancel;
+                              color = Colors.red;
+                              break;
+                            default:
+                              icon = Icons.delivery_dining;
+                              color = Colors.orange;
+                          }
+                          return DropdownMenuItem(
+                              value: s,
+                              child: Row(
+                                children: [
+                                  Icon(icon, color: color, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(s.replaceAll('_', ' ').toUpperCase()),
+                                ],
+                              ));
+                        }).toList(),
+                        onChanged: (v) => setState(() => _status = v!),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Available for Orders'),
+                          subtitle: Text(
+                              _isAvailable
+                                  ? 'Can receive new orders'
+                                  : 'Not accepting orders',
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 12)),
+                          value: _isAvailable,
+                          activeColor: Colors.deepPurple,
+                          onChanged: (v) => setState(() => _isAvailable = v),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _profileImgCtrl,
+                        decoration: inputDecoration.copyWith(
+                          labelText: 'Profile Image URL (Optional)',
+                          prefixIcon: const Icon(Icons.image_outlined,
+                              color: Colors.deepPurple),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Branch Assignment
+                      if (widget.userScope.isSuperAdmin) ...[
+                        Text('Branch Assignment',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.grey[700])),
+                        const SizedBox(height: 12),
+                        MultiBranchSelector(
+                          selectedIds: _selectedBranchIds,
+                          onChanged: (selected) =>
+                              setState(() => _selectedBranchIds = selected),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.store, color: Colors.blue),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Branch Assignment',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text(
+                                        '${widget.userScope.branchIds.length} branch(es) assigned',
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ],
-            ],
-          ),
+              ),
+            ),
+            // Actions
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: Colors.grey[400]!),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _onSave,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : Text(_isEdit ? 'Update Driver' : 'Add Driver'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _onSave,
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_isEdit ? 'Update' : 'Add'),
-        ),
-      ],
     );
   }
 }
