@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final lockoutEndMs = prefs.getInt(_lockoutEndKey);
     final attempts = prefs.getInt(_failedAttemptsKey) ?? 0;
-    
+
     setState(() {
       _failedAttempts = attempts;
       if (lockoutEndMs != null) {
@@ -56,7 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_failedAttemptsKey, _failedAttempts);
     if (_lockoutEndTime != null) {
-      await prefs.setInt(_lockoutEndKey, _lockoutEndTime!.millisecondsSinceEpoch);
+      await prefs.setInt(
+        _lockoutEndKey,
+        _lockoutEndTime!.millisecondsSinceEpoch,
+      );
     }
   }
 
@@ -83,12 +86,18 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     // Check lockout first
     if (_isLockedOut) {
-      setState(() => _errorMessage = 'Too many failed attempts. Please try again in $_lockoutRemainingTime');
+      setState(
+        () => _errorMessage =
+            'Too many failed attempts. Please try again in $_lockoutRemainingTime',
+      );
       return;
     }
 
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _isLoading = true; _errorMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final authService = context.read<AuthService>();
@@ -100,23 +109,31 @@ class _LoginScreenState extends State<LoginScreen> {
       if (error != null && mounted) {
         // Increment failed attempts
         _failedAttempts++;
-        
+
         // Check if we should lockout
         if (_failedAttempts >= AppConstants.maxLoginAttempts) {
-          _lockoutEndTime = DateTime.now().add(AppConstants.loginLockoutDuration);
+          _lockoutEndTime = DateTime.now().add(
+            AppConstants.loginLockoutDuration,
+          );
           await _saveRateLimitState();
-          setState(() => _errorMessage = 'Too many failed attempts. Account locked for ${AppConstants.loginLockoutDuration.inMinutes} minutes.');
+          setState(
+            () => _errorMessage =
+                'Too many failed attempts. Account locked for ${AppConstants.loginLockoutDuration.inMinutes} minutes.',
+          );
         } else {
           await _saveRateLimitState();
           final remaining = AppConstants.maxLoginAttempts - _failedAttempts;
-          setState(() => _errorMessage = '$error ($remaining attempts remaining)');
+          setState(
+            () => _errorMessage = '$error ($remaining attempts remaining)',
+          );
         }
       } else if (error == null) {
         // Successful login - clear rate limit state
         await _clearRateLimitState();
       }
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = "An unexpected error occurred.");
+      if (mounted)
+        setState(() => _errorMessage = "An unexpected error occurred.");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -124,7 +141,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _resetPassword() async {
     if (_emailController.text.isEmpty) {
-      setState(() => _errorMessage = "Please enter your email to reset password.");
+      setState(
+        () => _errorMessage = "Please enter your email to reset password.",
+      );
       return;
     }
     // Call your Auth Service reset password logic here
@@ -166,10 +185,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
-                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 15)],
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 15),
+                      ],
                     ),
                     child: const Center(
-                      child: Icon(Icons.restaurant_menu_rounded, size: 60, color: Colors.deepPurple),
+                      child: Icon(
+                        Icons.restaurant_menu_rounded,
+                        size: 60,
+                        color: Colors.deepPurple,
+                      ),
                       // Use Image.asset('assets/logo.png') here for production
                     ),
                   ),
@@ -187,30 +212,51 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     'Sign in to manage your branch',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
 
                   // --- INPUTS ---
                   TextFormField(
                     controller: _emailController,
-                    decoration: _buildInputDecoration('Work Email', Icons.email_outlined),
+                    decoration: _buildInputDecoration(
+                      'Work Email',
+                      Icons.email_outlined,
+                    ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    validator: (value) => (value == null || !value.contains('@')) ? 'Invalid email address' : null,
+                    validator: (value) =>
+                        (value == null || !value.contains('@'))
+                        ? 'Invalid email address'
+                        : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
-                    decoration: _buildInputDecoration('Password', Icons.lock_outline).copyWith(
-                      suffixIcon: IconButton(
-                        icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
-                        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
-                      ),
-                    ),
+                    decoration:
+                        _buildInputDecoration(
+                          'Password',
+                          Icons.lock_outline,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(
+                              () => _isPasswordVisible = !_isPasswordVisible,
+                            ),
+                          ),
+                        ),
                     onFieldSubmitted: (_) => _login(),
-                    validator: (value) => (value == null || value.isEmpty) ? 'Password is required' : null,
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Password is required'
+                        : null,
                   ),
 
                   // --- FORGOT PASSWORD ---
@@ -218,7 +264,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _resetPassword,
-                      child: const Text('Forgot Password?', style: TextStyle(color: Colors.deepPurple)),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(color: Colors.deepPurple),
+                      ),
                     ),
                   ),
 
@@ -236,9 +285,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13))),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -250,12 +311,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 2,
                       ),
                       child: _isLoading
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -265,10 +342,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Trouble logging in? ", style: TextStyle(color: Colors.grey[600])),
+                      Text(
+                        "Trouble logging in? ",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
                       GestureDetector(
                         onTap: _contactSupport,
-                        child: const Text("Contact Support", style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          "Contact Support",
+                          style: TextStyle(
+                            color: Colors.deepPurple,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -287,9 +373,18 @@ class _LoginScreenState extends State<LoginScreen> {
       prefixIcon: Icon(icon, color: Colors.grey[500]),
       filled: true,
       fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.deepPurple, width: 2)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+      ),
     );
   }
 }
