@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
-import '../Screens/MainScreen.dart';
 import '../main.dart'; // Imports UserScopeService
 import 'PrintingService.dart';
 import 'RiderAssignment.dart';
@@ -36,7 +35,7 @@ class OrderNotificationService with ChangeNotifier {
 
   bool get playSound => _playSound;
   bool get vibrate => _vibrate;
-  
+
   /// Check if service is properly initialized with navigator key
   bool get isInitialized => _navigatorKey != null;
 
@@ -68,41 +67,42 @@ class OrderNotificationService with ChangeNotifier {
   void init(UserScopeService scopeService, GlobalKey<NavigatorState> key) {
     _navigatorKey = key;
     _scopeService = scopeService;
-    
+
     // Clean up any existing listener
     if (_scopeListener != null) {
       scopeService.removeListener(_scopeListener!);
     }
-    
+
     // ✅ NEW: Listen for branch changes
     _scopeListener = () => _onScopeChanged(scopeService);
     scopeService.addListener(_scopeListener!);
-    
+
     if (scopeService.isLoaded) {
       _lastKnownBranchIds = List.from(scopeService.branchIds);
       _startBackupListener(scopeService);
     }
-    
+
     debugPrint("✅ OrderNotificationService initialized with navigator key");
   }
-  
+
   /// ✅ NEW: Handle scope changes (e.g., branch reassignment)
   void _onScopeChanged(UserScopeService scopeService) {
     if (!scopeService.isLoaded) return;
-    
+
     // Check if branchIds actually changed
     final currentBranchIds = scopeService.branchIds;
     final branchesChanged = !_listEquals(currentBranchIds, _lastKnownBranchIds);
-    
+
     if (branchesChanged) {
-      debugPrint("🔄 Branch IDs changed: $_lastKnownBranchIds → $currentBranchIds");
+      debugPrint(
+          "🔄 Branch IDs changed: $_lastKnownBranchIds → $currentBranchIds");
       _lastKnownBranchIds = List.from(currentBranchIds);
-      
+
       // Restart the backup listener with new branches
       _startBackupListener(scopeService);
     }
   }
-  
+
   /// Compare two lists for equality
   bool _listEquals(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
@@ -113,7 +113,7 @@ class OrderNotificationService with ChangeNotifier {
     }
     return true;
   }
-  
+
   /// Clean up listeners when service is disposed
   @override
   void dispose() {
@@ -131,7 +131,8 @@ class OrderNotificationService with ChangeNotifier {
 
     if (scopeService.branchIds.isEmpty) return;
 
-    debugPrint("🎧 Starting Backup Listener for branches: ${scopeService.branchIds}");
+    debugPrint(
+        "🎧 Starting Backup Listener for branches: ${scopeService.branchIds}");
 
     _backupSubscription = FirebaseFirestore.instance
         .collection('Orders')
@@ -151,7 +152,8 @@ class OrderNotificationService with ChangeNotifier {
               final Duration diff = DateTime.now().difference(orderTime);
 
               if (diff.inHours > 12) {
-                debugPrint("👻 Ignoring GHOST ORDER (Too Old): $orderId (${diff.inHours} hours ago)");
+                debugPrint(
+                    "👻 Ignoring GHOST ORDER (Too Old): $orderId (${diff.inHours} hours ago)");
                 continue;
               }
             }
@@ -169,7 +171,8 @@ class OrderNotificationService with ChangeNotifier {
     });
   }
 
-  void handleFCMOrder(Map<String, dynamic> payload, UserScopeService scopeService) {
+  void handleFCMOrder(
+      Map<String, dynamic> payload, UserScopeService scopeService) {
     if (!scopeService.isLoaded) return;
 
     final String? orderId = payload['orderId'];
@@ -215,17 +218,24 @@ class OrderNotificationService with ChangeNotifier {
             },
             onAccept: () async {
               try {
-                String acceptedBy = scopeService.userEmail.isNotEmpty ? scopeService.userEmail : 'Admin';
-                final docRef = FirebaseFirestore.instance.collection('Orders').doc(orderId);
+                String acceptedBy = scopeService.userEmail.isNotEmpty
+                    ? scopeService.userEmail
+                    : 'Admin';
+                final docRef = FirebaseFirestore.instance
+                    .collection('Orders')
+                    .doc(orderId);
 
-                await FirebaseFirestore.instance.runTransaction((transaction) async {
+                await FirebaseFirestore.instance
+                    .runTransaction((transaction) async {
                   final snapshot = await transaction.get(docRef);
 
-                  if (!snapshot.exists) throw Exception("Order no longer exists!");
+                  if (!snapshot.exists)
+                    throw Exception("Order no longer exists!");
                   final status = snapshot.get('status');
                   // Allow accepting 'pending' AND 'pending_payment'
                   if (status != 'pending' && status != 'pending_payment') {
-                    throw Exception("Order was already accepted by someone else.");
+                    throw Exception(
+                        "Order was already accepted by someone else.");
                   }
 
                   transaction.update(docRef, {
@@ -246,9 +256,9 @@ class OrderNotificationService with ChangeNotifier {
                     debugPrint("✅ Auto-printed receipt for order $orderId");
                   }
                 } catch (printError) {
-                  debugPrint("⚠️ Auto-print failed (non-blocking): $printError");
+                  debugPrint(
+                      "⚠️ Auto-print failed (non-blocking): $printError");
                 }
-
               } catch (e) {
                 debugPrint("❌ Failed to accept order: $e");
                 if (context.mounted) {
@@ -263,8 +273,13 @@ class OrderNotificationService with ChangeNotifier {
             onReject: (reason) async {
               try {
                 await RiderAssignmentService.cancelAutoAssignment(orderId);
-                String rejectedBy = scopeService.userEmail.isNotEmpty ? scopeService.userEmail : 'Admin';
-                await FirebaseFirestore.instance.collection('Orders').doc(orderId).update({
+                String rejectedBy = scopeService.userEmail.isNotEmpty
+                    ? scopeService.userEmail
+                    : 'Admin';
+                await FirebaseFirestore.instance
+                    .collection('Orders')
+                    .doc(orderId)
+                    .update({
                   'status': 'cancelled',
                   'cancellationReason': reason,
                   'rejectedBy': rejectedBy,
@@ -274,7 +289,9 @@ class OrderNotificationService with ChangeNotifier {
                 debugPrint("❌ Failed to reject order: $e");
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error rejecting order: $e"), backgroundColor: Colors.red),
+                    SnackBar(
+                        content: Text("Error rejecting order: $e"),
+                        backgroundColor: Colors.red),
                   );
                 }
               }
@@ -285,37 +302,42 @@ class OrderNotificationService with ChangeNotifier {
                 debugPrint("⏳ Timer expired. Attempting to Auto-Accept...");
 
                 // ✅ SAFE AUTO-ACCEPT: Use Transaction to check status first
-                final docRef = FirebaseFirestore.instance.collection('Orders').doc(orderId);
-                
-                await FirebaseFirestore.instance.runTransaction((transaction) async {
+                final docRef = FirebaseFirestore.instance
+                    .collection('Orders')
+                    .doc(orderId);
+
+                await FirebaseFirestore.instance
+                    .runTransaction((transaction) async {
                   final snapshot = await transaction.get(docRef);
-                  
-                  if (!snapshot.exists) throw Exception("Order no longer exists!");
-                  
+
+                  if (!snapshot.exists)
+                    throw Exception("Order no longer exists!");
+
                   final currentStatus = snapshot.get('status');
-                  
+
                   // 🛑 CRITICAL CHECK: Only auto-accept if STILL PENDING or PENDING PAYMENT
-                  if (currentStatus != 'pending' && currentStatus != 'pending_payment') {
-                    debugPrint("⚠️ Order $orderId was already handled (Status: $currentStatus). Aborting Auto-Accept.");
+                  if (currentStatus != 'pending' &&
+                      currentStatus != 'pending_payment') {
+                    debugPrint(
+                        "⚠️ Order $orderId was already handled (Status: $currentStatus). Aborting Auto-Accept.");
                     return; // Do nothing, let the listener dismiss the dialog
                   }
 
                   transaction.update(docRef, {
                     'status': 'preparing',
-                    'autoAccepted': true, 
+                    'autoAccepted': true,
                     'acceptedBy': 'Auto-Accept System',
                     'acceptedAt': FieldValue.serverTimestamp(),
                   });
                 });
 
                 if (context.mounted) {
-                   // Only show snackbar if we actually did something? 
-                   // Ideally we can't easily know if transaction aborted cleanly or updated inside here
-                   // without returning a value. 
-                   // But safely assuming if no specific error thrown, it went through OR was skipped.
-                   // We will let the StreamListener dismiss the UI.
+                  // Only show snackbar if we actually did something?
+                  // Ideally we can't easily know if transaction aborted cleanly or updated inside here
+                  // without returning a value.
+                  // But safely assuming if no specific error thrown, it went through OR was skipped.
+                  // We will let the StreamListener dismiss the UI.
                 }
-
               } catch (e) {
                 debugPrint("❌ Auto-accept transaction failed: $e");
               }
@@ -357,7 +379,8 @@ class NewOrderDialog extends StatefulWidget {
   NewOrderDialogState createState() => NewOrderDialogState();
 }
 
-class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObserver {
+class NewOrderDialogState extends State<NewOrderDialog>
+    with WidgetsBindingObserver {
   Map<String, dynamic>? _orderData;
   bool _isLoading = true;
   String? _errorMessage;
@@ -371,16 +394,18 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
   bool _isProcessing = false;
   bool _isClosing = false; // Prevent multiple pop() calls
 
-  String get orderNumber => _orderData?['dailyOrderNumber']?.toString() ?? '---';
+  String get orderNumber =>
+      _orderData?['dailyOrderNumber']?.toString() ?? '---';
   String get customerName => _orderData?['customerName']?.toString() ?? 'Guest';
   String get orderType => _orderData?['Order_type']?.toString() ?? 'Delivery';
 
   String get address {
     try {
       if (_orderData?['deliveryAddress'] is Map) {
-        return _orderData?['deliveryAddress']['street']?.toString() ?? 'No Address';
+        return _orderData?['deliveryAddress']['street']?.toString() ??
+            'No Address';
       }
-    } catch(e) {}
+    } catch (e) {}
     return 'N/A';
   }
 
@@ -393,7 +418,8 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
           return {
             'name': itemMap['name']?.toString() ?? 'Item',
             'qty': int.tryParse(itemMap['quantity']?.toString() ?? '1') ?? 1,
-            'price': double.tryParse(itemMap['price']?.toString() ?? '0') ?? 0.0,
+            'price':
+                double.tryParse(itemMap['price']?.toString() ?? '0') ?? 0.0,
           };
         }).toList();
       }
@@ -403,12 +429,13 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
     return [];
   }
 
-  double get totalAmount => double.tryParse(_orderData?['totalAmount']?.toString() ?? '0') ?? 0.0;
-  String get specialInstructions => _orderData?['specialInstructions']?.toString() ?? '';
+  double get totalAmount =>
+      double.tryParse(_orderData?['totalAmount']?.toString() ?? '0') ?? 0.0;
+  String get specialInstructions =>
+      _orderData?['specialInstructions']?.toString() ?? '';
 
   // Duplicate initState removed
   StreamSubscription? _orderSubscription;
-
 
   @override
   void initState() {
@@ -442,14 +469,16 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
       final status = data['status'];
       if (status != 'pending' && status != 'pending_payment') {
         if (mounted && !_isClosing) {
-           _isClosing = true;
-           // If accepted by someone else, close silently or with toast
-           // But check who accepted it?
-           final acceptedBy = data['acceptedBy'] ?? 'another user';
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('Order handled by $acceptedBy'), backgroundColor: Colors.blue),
-           );
-           Navigator.of(context).pop(); 
+          _isClosing = true;
+          // If accepted by someone else, close silently or with toast
+          // But check who accepted it?
+          final acceptedBy = data['acceptedBy'] ?? 'another user';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Order handled by $acceptedBy'),
+                backgroundColor: Colors.blue),
+          );
+          Navigator.of(context).pop();
         }
         return;
       }
@@ -459,13 +488,13 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
           _orderData = data;
           _isLoading = false;
         });
-        
-        // Initialize countdown only once or on changes? 
+
+        // Initialize countdown only once or on changes?
         // We only need to start once.
         if (_timer == null) {
-           _initializeCountdown();
-           startTimer();
-           _startAlarm();
+          _initializeCountdown();
+          startTimer();
+          _startAlarm();
         }
       }
     }, onError: (e) {
@@ -477,7 +506,7 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
   bool _isUserAuthorized(Map<String, dynamic> data) {
     // ✅ FIX: SuperAdmins should only see orders for their assigned branchIds,
     // not ALL orders. Removed the isSuperAdmin bypass.
-    
+
     List<dynamic> orderBranchIds = [];
     if (data['branchIds'] is List) {
       orderBranchIds = data['branchIds'];
@@ -486,7 +515,8 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
     }
 
     if (orderBranchIds.isNotEmpty) {
-      return orderBranchIds.any((id) => widget.scopeService.branchIds.contains(id.toString()));
+      return orderBranchIds
+          .any((id) => widget.scopeService.branchIds.contains(id.toString()));
     }
 
     return false;
@@ -648,11 +678,16 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
   Color _getHeaderColor() {
     if (_orderData == null) return Colors.deepPurple;
     switch (orderType.toLowerCase()) {
-      case 'delivery': return Colors.blue.shade800;
-      case 'takeaway': return Colors.orange.shade800;
-      case 'pickup': return Colors.green.shade800;
-      case 'dine_in': return Colors.purple.shade800;
-      default: return Colors.deepPurple;
+      case 'delivery':
+        return Colors.blue.shade800;
+      case 'takeaway':
+        return Colors.orange.shade800;
+      case 'pickup':
+        return Colors.green.shade800;
+      case 'dine_in':
+        return Colors.purple.shade800;
+      default:
+        return Colors.deepPurple;
     }
   }
 
@@ -667,176 +702,226 @@ class NewOrderDialogState extends State<NewOrderDialog> with WidgetsBindingObser
         insetPadding: const EdgeInsets.all(16),
         child: _isLoading
             ? Container(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_errorMessage == null) const CircularProgressIndicator(),
-              const SizedBox(height: 20),
-              Text(
-                  _errorMessage ?? "Loading Order...",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _errorMessage != null ? Colors.red : Colors.black
-                  )
-              ),
-            ],
-          ),
-        )
-            : Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // HEADER
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: _getHeaderColor(),
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              ),
-              child: Row(
-                children: [
-                  if (_isProcessing)
-                    const SizedBox(
-                        width: 24, height: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                    )
-                  else
-                    const Icon(Icons.notifications_active, color: Colors.white, size: 28),
-
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'NEW ${orderType.toUpperCase()}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                        Text(
-                          'Order #$orderNumber',
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: _isStale ? Colors.red : Colors.white24, borderRadius: BorderRadius.circular(20)),
-                    child: Text(
-                      _isStale ? 'LATE' : '$_countdown s',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  )
-                ],
-              ),
-            ),
-
-            // BODY
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(30),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.person, color: Colors.grey, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(customerName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-                      ],
-                    ),
-                    if (orderType.toLowerCase() == 'delivery') ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.grey, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(address, style: const TextStyle(fontSize: 14, color: Colors.black87), maxLines: 2)),
-                        ],
-                      ),
-                    ],
-
-                    const Divider(height: 24),
-
-                    ...items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(4)
-                            ),
-                            child: Text('${item['qty']}x', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text(item['name'], style: const TextStyle(fontSize: 15))),
-                          Text('QAR ${item['price']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    )).toList(),
-
-                    if (specialInstructions.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: Colors.yellow[50], borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.yellow[200]!)),
-                        child: Text("Note: $specialInstructions", style: const TextStyle(color: Colors.brown, fontStyle: FontStyle.italic)),
-                      )
-                    ],
-
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Total Amount", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text("QAR ${totalAmount.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
-                      ],
-                    ),
+                    if (_errorMessage == null)
+                      const CircularProgressIndicator(),
+                    const SizedBox(height: 20),
+                    Text(_errorMessage ?? "Loading Order...",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _errorMessage != null
+                                ? Colors.red
+                                : Colors.black)),
                   ],
                 ),
-              ),
-            ),
-
-            // ACTIONS
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isProcessing ? null : _handleRejectPress,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      child: const Text("REJECT"),
+                  // HEADER
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: _getHeaderColor(),
+                      borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20)),
+                    ),
+                    child: Row(
+                      children: [
+                        if (_isProcessing)
+                          const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                        else
+                          const Icon(Icons.notifications_active,
+                              color: Colors.white, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'NEW ${orderType.toUpperCase()}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18),
+                              ),
+                              Text(
+                                'Order #$orderNumber',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: _isStale ? Colors.red : Colors.white24,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Text(
+                            _isStale ? 'LATE' : '$_countdown s',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _isProcessing ? null : _handleAcceptPress,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 5,
+
+                  // BODY
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.person,
+                                  color: Colors.grey, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: Text(customerName,
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold))),
+                            ],
+                          ),
+                          if (orderType.toLowerCase() == 'delivery') ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.location_on,
+                                    color: Colors.grey, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                    child: Text(address,
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87),
+                                        maxLines: 2)),
+                              ],
+                            ),
+                          ],
+                          const Divider(height: 24),
+                          ...items
+                              .map((item) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 8.0),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              borderRadius:
+                                                  BorderRadius.circular(4)),
+                                          child: Text('${item['qty']}x',
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                            child: Text(item['name'],
+                                                style: const TextStyle(
+                                                    fontSize: 15))),
+                                        Text('QAR ${item['price']}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ))
+                              .toList(),
+                          if (specialInstructions.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                  color: Colors.yellow[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: Colors.yellow[200]!)),
+                              child: Text("Note: $specialInstructions",
+                                  style: const TextStyle(
+                                      color: Colors.brown,
+                                      fontStyle: FontStyle.italic)),
+                            )
+                          ],
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Total Amount",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                              Text("QAR ${totalAmount.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green)),
+                            ],
+                          ),
+                        ],
                       ),
-                      child: const Text("ACCEPT ORDER", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+
+                  // ACTIONS
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed:
+                                _isProcessing ? null : _handleRejectPress,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text("REJECT"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed:
+                                _isProcessing ? null : _handleAcceptPress,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                              elevation: 5,
+                            ),
+                            child: const Text("ACCEPT ORDER",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -846,7 +931,8 @@ class CancellationReasonDialog extends StatefulWidget {
   const CancellationReasonDialog({Key? key}) : super(key: key);
 
   @override
-  State<CancellationReasonDialog> createState() => _CancellationReasonDialogState();
+  State<CancellationReasonDialog> createState() =>
+      _CancellationReasonDialogState();
 }
 
 class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
@@ -887,7 +973,8 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
   @override
   Widget build(BuildContext context) {
     final bool isOther = _selectedReason == 'Other';
-    final bool isValid = _selectedReason != null && (!isOther || _otherReasonController.text.trim().isNotEmpty);
+    final bool isValid = _selectedReason != null &&
+        (!isOther || _otherReasonController.text.trim().isNotEmpty);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -910,15 +997,15 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.report_problem_rounded, color: Colors.red.shade700),
+                  Icon(Icons.report_problem_rounded,
+                      color: Colors.red.shade700),
                   const SizedBox(width: 12),
                   Text(
                     'Reject Order',
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red.shade900
-                    ),
+                        color: Colors.red.shade900),
                   ),
                 ],
               ),
@@ -931,10 +1018,10 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
                   children: [
                     const Text(
                       "Please select a reason:",
-                      style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500, color: Colors.grey),
                     ),
                     const SizedBox(height: 10),
-
                     ..._reasons.map((reason) {
                       final bool isSelected = _selectedReason == reason;
                       return Padding(
@@ -945,19 +1032,25 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
                           child: Container(
                             decoration: BoxDecoration(
                               border: Border.all(
-                                  color: isSelected ? Colors.red : Colors.grey.shade300,
-                                  width: isSelected ? 2 : 1
-                              ),
+                                  color: isSelected
+                                      ? Colors.red
+                                      : Colors.grey.shade300,
+                                  width: isSelected ? 2 : 1),
                               borderRadius: BorderRadius.circular(8),
-                              color: isSelected ? Colors.red.shade50 : Colors.white,
+                              color: isSelected
+                                  ? Colors.red.shade50
+                                  : Colors.white,
                             ),
                             child: RadioListTile<String>(
                               title: Text(
                                 reason,
                                 style: TextStyle(
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? Colors.red.shade900 : Colors.black87
-                                ),
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? Colors.red.shade900
+                                        : Colors.black87),
                               ),
                               value: reason,
                               groupValue: _selectedReason,
@@ -966,15 +1059,16 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
                               contentPadding: EdgeInsets.zero,
                               dense: true,
                               visualDensity: VisualDensity.compact,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
                         ),
                       );
                     }).toList(),
-
                     AnimatedCrossFade(
-                      firstChild: const SizedBox(width: double.infinity, height: 0),
+                      firstChild:
+                          const SizedBox(width: double.infinity, height: 0),
                       secondChild: Padding(
                         padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
                         child: TextField(
@@ -986,16 +1080,20 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
                             hintText: 'e.g. Ingredient missing',
                             filled: true,
                             fillColor: Colors.grey.shade50,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: Colors.red, width: 2),
+                              borderSide:
+                                  const BorderSide(color: Colors.red, width: 2),
                             ),
                           ),
                           maxLines: 2,
                         ),
                       ),
-                      crossFadeState: isOther ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                      crossFadeState: isOther
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
                       duration: const Duration(milliseconds: 200),
                     ),
                   ],
@@ -1020,19 +1118,23 @@ class _CancellationReasonDialogState extends State<CancellationReasonDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: isValid ? () {
-                        String finalReason = _selectedReason!;
-                        if (finalReason == 'Other') {
-                          finalReason = _otherReasonController.text.trim();
-                        }
-                        Navigator.of(context).pop(finalReason);
-                      } : null,
+                      onPressed: isValid
+                          ? () {
+                              String finalReason = _selectedReason!;
+                              if (finalReason == 'Other') {
+                                finalReason =
+                                    _otherReasonController.text.trim();
+                              }
+                              Navigator.of(context).pop(finalReason);
+                            }
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                         disabledBackgroundColor: Colors.red.shade100,
                       ),
                       child: const Text('Confirm Rejection'),

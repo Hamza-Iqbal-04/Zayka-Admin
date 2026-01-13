@@ -18,6 +18,8 @@ class AnalyticsPdfService {
     required double avgOrderValue,
     required List<Map<String, dynamic>> topItems,
     required Map<String, int> orderTypeDistribution,
+    int cancelledCount = 0,
+    int refundedCount = 0,
     List<Map<String, dynamic>>? topRiders,
     List<Map<String, dynamic>>? topCustomers,
   }) async {
@@ -97,7 +99,7 @@ class AnalyticsPdfService {
           );
         },
         build: (pw.Context context) => [
-          // KPI Summary Section
+          // KPI Summary Section - First Row
           pw.Container(
             padding: const pw.EdgeInsets.all(16),
             decoration: pw.BoxDecoration(
@@ -118,6 +120,30 @@ class AnalyticsPdfService {
               ],
             ),
           ),
+          pw.SizedBox(height: 12),
+          // KPI Summary Section - Second Row (Cancelled/Refunded)
+          pw.Container(
+            padding: const pw.EdgeInsets.all(16),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey100,
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+              children: [
+                _buildPdfKpiCard(
+                    'Cancelled', cancelledCount.toString(), PdfColors.red),
+                _buildPdfKpiCard(
+                    'Refunded', refundedCount.toString(), PdfColors.purple),
+                _buildPdfKpiCard(
+                    'Problem Rate',
+                    totalOrders > 0
+                        ? '${((cancelledCount + refundedCount) / totalOrders * 100).toStringAsFixed(1)}%'
+                        : '0%',
+                    PdfColors.amber),
+              ],
+            ),
+          ),
           pw.SizedBox(height: 24),
 
           // Order Type Distribution
@@ -130,6 +156,16 @@ class AnalyticsPdfService {
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.deepPurple),
               cellPadding: const pw.EdgeInsets.all(8),
+              headerAlignments: {
+                0: pw.Alignment.centerLeft,
+                1: pw.Alignment.center,
+                2: pw.Alignment.center,
+              },
+              cellAlignments: {
+                0: pw.Alignment.centerLeft,
+                1: pw.Alignment.center,
+                2: pw.Alignment.center,
+              },
               headers: ['Order Type', 'Count', 'Percentage'],
               data: orderTypeDistribution.entries.map((e) {
                 final total =
@@ -157,6 +193,18 @@ class AnalyticsPdfService {
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.deepPurple),
               cellPadding: const pw.EdgeInsets.all(8),
+              headerAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+                3: pw.Alignment.center,
+              },
+              cellAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+                3: pw.Alignment.center,
+              },
               headers: ['Rank', 'Item Name', 'Quantity Sold', 'Revenue'],
               data: topItems.asMap().entries.map((e) {
                 final item = e.value;
@@ -181,6 +229,16 @@ class AnalyticsPdfService {
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.deepPurple),
               cellPadding: const pw.EdgeInsets.all(8),
+              headerAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+              },
+              cellAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+              },
               headers: ['Rank', 'Rider Name', 'Deliveries'],
               data: topRiders.asMap().entries.map((e) {
                 final rider = e.value;
@@ -204,6 +262,18 @@ class AnalyticsPdfService {
               headerDecoration:
                   const pw.BoxDecoration(color: PdfColors.deepPurple),
               cellPadding: const pw.EdgeInsets.all(8),
+              headerAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+                3: pw.Alignment.center,
+              },
+              cellAlignments: {
+                0: pw.Alignment.center,
+                1: pw.Alignment.centerLeft,
+                2: pw.Alignment.center,
+                3: pw.Alignment.center,
+              },
               headers: ['Rank', 'Customer', 'Orders', 'Total Spend'],
               data: topCustomers.asMap().entries.map((e) {
                 final customer = e.value;

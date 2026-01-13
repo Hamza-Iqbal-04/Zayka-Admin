@@ -1,6 +1,5 @@
 // lib/Widgets/TimeUtils.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
@@ -29,9 +28,8 @@ class TimeUtils {
     final now = nowQatar();
 
     // If it's before 6 AM, the business day started yesterday at 6 AM
-    final effectiveDate = now.hour < 6
-        ? now.subtract(const Duration(days: 1))
-        : now;
+    final effectiveDate =
+        now.hour < 6 ? now.subtract(const Duration(days: 1)) : now;
 
     return tz.TZDateTime(
       now.location,

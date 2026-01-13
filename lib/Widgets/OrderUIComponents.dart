@@ -6,10 +6,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:provider/provider.dart';
-
-import '../constants.dart';
-import '../main.dart';
 
 /// Centralized status color and display logic
 class StatusUtils {

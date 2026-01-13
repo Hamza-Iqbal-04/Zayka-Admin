@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+// Working Hours Model - no Flutter dependencies needed
 
 class TimeSlot {
   final int openMinutes; // Minutes from midnight (e.g., 09:00 = 540)
@@ -35,7 +35,9 @@ class DaySchedule {
 
     // Only parse slots if the day is actually marked Open
     final slots = isOpen
-        ? rawSlots.map((s) => TimeSlot.fromMap(Map<String, dynamic>.from(s))).toList()
+        ? rawSlots
+            .map((s) => TimeSlot.fromMap(Map<String, dynamic>.from(s)))
+            .toList()
         : <TimeSlot>[];
 
     return DaySchedule(isOpen: isOpen, slots: slots);

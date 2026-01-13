@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // ✅ App Check for security
 import 'Screens/ConnectionUtils.dart';
 import 'Screens/MainScreen.dart';
 import 'Widgets/Authorization.dart';
@@ -31,13 +32,13 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher');
+      AndroidInitializationSettings('@mipmap/ic_launcher');
 
   const InitializationSettings initializationSettings =
-  InitializationSettings(android: initializationSettingsAndroid);
+      InitializationSettings(android: initializationSettingsAndroid);
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
@@ -51,13 +52,15 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(channel);
 
-  String title =
-      message.data['title'] ?? message.notification?.title ?? "New Order Received";
-  String body =
-      message.data['body'] ?? message.notification?.body ?? "Open app to view details";
+  String title = message.data['title'] ??
+      message.notification?.title ??
+      "New Order Received";
+  String body = message.data['body'] ??
+      message.notification?.body ??
+      "Open app to view details";
 
   await flutterLocalNotificationsPlugin.show(
     message.hashCode,
@@ -94,6 +97,27 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    // ✅ Initialize Firebase App Check for security
+    // This protects Firebase resources from abuse by verifying requests
+    // come from your authentic app on genuine devices
+    // NOTE: Web uses reCAPTCHA v3 (FREE). For web, App Check is optional since
+    // Firestore Security Rules provide the primary protection.
+    try {
+      await FirebaseAppCheck.instance.activate(
+        // Use debug provider for development, real attestation for release
+        androidProvider:
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+        // Web: Uses free reCAPTCHA v3 - just leave null/skip if not configured
+        // Your Firestore Rules already protect the data
+      );
+      debugPrint('✅ Firebase App Check initialized');
+    } catch (e) {
+      // App Check is optional - app works without it (Firestore Rules protect data)
+      debugPrint('⚠️ App Check not configured: $e');
+    }
+
     // Initialize Crashlytics for error reporting
     // FlutterError handler for framework errors
     FlutterError.onError = (errorDetails) {
@@ -122,7 +146,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
-        ChangeNotifierProvider<UserScopeService>(create: (_) => UserScopeService()),
+        ChangeNotifierProvider<UserScopeService>(
+            create: (_) => UserScopeService()),
         ChangeNotifierProvider<OrderNotificationService>(
             create: (_) => OrderNotificationService()),
         ChangeNotifierProvider<RestaurantStatusService>(
@@ -238,14 +263,14 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
     final authService = context.read<AuthService>();
 
     final bool isSuccess =
-    await scopeService.loadUserScope(widget.user, authService);
+        await scopeService.loadUserScope(widget.user, authService);
 
     if (isSuccess && mounted) {
       if (scopeService.branchId.isNotEmpty) {
         String restaurantName = "Branch ${scopeService.branchId}";
         if (scopeService.userEmail.isNotEmpty) {
           restaurantName =
-          "Restaurant (${scopeService.userEmail.split('@').first})";
+              "Restaurant (${scopeService.userEmail.split('@').first})";
         }
         statusService.initialize(scopeService.branchId,
             restaurantName: restaurantName);
@@ -260,7 +285,8 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
         debugPrint("📬 Processing pending cold-start notification...");
         // Small delay to ensure UI is fully ready
         await Future.delayed(const Duration(milliseconds: 500));
-        FcmService.processPendingNotification(notificationService, scopeService);
+        FcmService.processPendingNotification(
+            notificationService, scopeService);
       }
 
       await _requestInitialPermissions();
@@ -430,8 +456,8 @@ class UserScopeService with ChangeNotifier {
           .snapshots()
           .listen(
             (snapshot) => _handleScopeUpdate(snapshot, authService),
-        onError: (error) => _handleScopeError(error, authService),
-      );
+            onError: (error) => _handleScopeError(error, authService),
+          );
 
       notifyListeners();
       return true;
@@ -479,4 +505,3 @@ class UserScopeService with ChangeNotifier {
     notifyListeners();
   }
 }
-

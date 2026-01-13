@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../Widgets/AccessDeniedWidget.dart';
 import '../Widgets/Authorization.dart';
 import '../Widgets/Permissions.dart';
-import '../Widgets/RestaurantStatusService.dart';
 import '../Widgets/notification.dart';
 import '../Widgets/BranchFilterService.dart';
 import '../main.dart';
@@ -35,14 +34,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool? _hadPermissionOnInit;
 
   late OrderNotificationService _notificationService;
-  late RestaurantStatusService _restaurantStatus;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
     _notificationService = context.read<OrderNotificationService>();
-    _restaurantStatus = context.read<RestaurantStatusService>();
   }
 
   Future<void> _loadPreferences() async {
@@ -184,13 +181,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildProfileCard(userScope, authService),
                 const SizedBox(height: 24),
 
-                // Restaurant Status
-                _buildRestaurantStatusCard(_restaurantStatus, userScope),
-                const SizedBox(height: 24),
-
                 // Administration Section
                 if (userScope.isSuperAdmin ||
-                    userScope.can(Permissions.canManageStaff) ||
                     userScope.can(Permissions.canManageCoupons)) ...[
                   _buildSectionTitle(
                       'Administration', Icons.admin_panel_settings),
@@ -220,8 +212,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               builder: (context) => const OrderHistoryScreen()),
                         ),
                       ),
-                    if (userScope.isSuperAdmin &&
-                        userScope.can(Permissions.canManageStaff))
+                    // Staff Management - Super Admin only
+                    if (userScope.isSuperAdmin)
                       _SettingsItem(
                         icon: Icons.people_alt,
                         title: 'Staff Management',
@@ -245,6 +237,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   const CouponManagementScreen()),
                         ),
                       ),
+                    // Branch Settings - Super Admin only
                     if (userScope.isSuperAdmin)
                       _SettingsItem(
                         icon: Icons.business_outlined,
@@ -704,11 +697,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildRestaurantStatusCard(
-      RestaurantStatusService status, UserScopeService scope) {
-    return _SuperAdminStatusCard(userScope: scope);
   }
 
   Widget _SettingsCard({required Widget child}) {

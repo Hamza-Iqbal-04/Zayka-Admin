@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:excel/excel.dart' as excel_lib;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 import '../utils/responsive_helper.dart';
 import '../services/AnalyticsPdfService.dart';
 
@@ -91,13 +95,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             _buildDateRangeSelector(),
             const SizedBox(height: 16),
 
-            // Prominent Export PDF Button
+            // Export Report Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf, size: 24),
+                icon: const Icon(Icons.file_download_outlined, size: 24),
                 label: const Text(
-                  'Download PDF Report',
+                  'Export Report',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -417,33 +421,86 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         );
         final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-        return Row(
+        // Count cancelled and refunded orders
+        int cancelledCount = 0;
+        int refundedCount = 0;
+        for (var doc in orders) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = (data['status'] as String?)?.toLowerCase() ?? '';
+          if (status == 'cancelled') {
+            cancelledCount++;
+          } else if (status == 'refunded') {
+            refundedCount++;
+          }
+        }
+
+        return Column(
           children: [
-            Expanded(
-              child: _buildMetricCard(
-                'Total Orders',
-                totalOrders.toString(),
-                Icons.receipt_long_outlined,
-                Colors.blue,
-              ),
+            // First row: Total Orders, Revenue, Avg Order
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Total Orders',
+                    totalOrders.toString(),
+                    Icons.receipt_long_outlined,
+                    Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Revenue',
+                    'QAR ${totalRevenue.toStringAsFixed(0)}',
+                    Icons.attach_money_outlined,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Avg Order',
+                    'QAR ${avgOrderValue.toStringAsFixed(0)}',
+                    Icons.trending_up_outlined,
+                    Colors.orange,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildMetricCard(
-                'Revenue',
-                'QAR ${totalRevenue.toStringAsFixed(0)}',
-                Icons.attach_money_outlined,
-                Colors.green,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildMetricCard(
-                'Avg Order',
-                'QAR ${avgOrderValue.toStringAsFixed(0)}',
-                Icons.trending_up_outlined,
-                Colors.orange,
-              ),
+            const SizedBox(height: 16),
+            // Second row: Cancelled and Refunded Orders
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Cancelled',
+                    cancelledCount.toString(),
+                    Icons.cancel_outlined,
+                    Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Refunded',
+                    refundedCount.toString(),
+                    Icons.money_off_outlined,
+                    Colors.purple,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Percentage of problematic orders
+                Expanded(
+                  child: _buildMetricCard(
+                    'Problem Rate',
+                    totalOrders > 0
+                        ? '${((cancelledCount + refundedCount) / totalOrders * 100).toStringAsFixed(1)}%'
+                        : '0%',
+                    Icons.warning_amber_outlined,
+                    Colors.amber,
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1020,6 +1077,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   String _formatOrderTypeForPieLabel(String normalizedKey) {
     switch (normalizedKey) {
+      case 'all':
+        return 'All Orders';
       case 'delivery':
         return 'Delivery';
       case 'takeaway':
@@ -1380,6 +1439,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   Future<void> _showExportDialog(BuildContext context) async {
     DateTimeRange reportDateRange = _dateRange;
     String reportOrderType = _selectedOrderType;
+    String exportFormat = 'pdf'; // Default to PDF
 
     showDialog(
       context: context,
@@ -1396,13 +1456,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     color: Colors.deepPurple.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.picture_as_pdf,
+                  child: const Icon(Icons.file_download_outlined,
                       color: Colors.deepPurple, size: 28),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Export PDF Report',
+                    'Export Report',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                 ),
@@ -1416,6 +1476,103 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   const Text(
                     'Configure your report settings below.',
                     style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Export Format Selection
+                  const Text(
+                    'Export Format',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () =>
+                              setDialogState(() => exportFormat = 'pdf'),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: exportFormat == 'pdf'
+                                  ? Colors.deepPurple.withOpacity(0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: exportFormat == 'pdf'
+                                    ? Colors.deepPurple
+                                    : Colors.grey[300]!,
+                                width: exportFormat == 'pdf' ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.picture_as_pdf,
+                                  color: exportFormat == 'pdf'
+                                      ? Colors.deepPurple
+                                      : Colors.grey[600],
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'PDF',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: exportFormat == 'pdf'
+                                        ? Colors.deepPurple
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () =>
+                              setDialogState(() => exportFormat = 'excel'),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: exportFormat == 'excel'
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: exportFormat == 'excel'
+                                    ? Colors.green
+                                    : Colors.grey[300]!,
+                                width: exportFormat == 'excel' ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.table_chart,
+                                  color: exportFormat == 'excel'
+                                      ? Colors.green
+                                      : Colors.grey[600],
+                                  size: 32,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Excel',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: exportFormat == 'excel'
+                                        ? Colors.green
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
 
@@ -1519,10 +1676,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 child: const Text('Cancel'),
               ),
               ElevatedButton.icon(
-                icon: const Icon(Icons.download, size: 18),
-                label: const Text('Generate Report'),
+                icon: Icon(
+                  exportFormat == 'pdf'
+                      ? Icons.picture_as_pdf
+                      : Icons.table_chart,
+                  size: 18,
+                ),
+                label: Text('Download ${exportFormat.toUpperCase()}'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor:
+                      exportFormat == 'pdf' ? Colors.deepPurple : Colors.green,
                   foregroundColor: Colors.white,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -1531,8 +1694,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ),
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  await _generatePdfReportWithParams(
-                      reportDateRange, reportOrderType);
+                  if (exportFormat == 'pdf') {
+                    await _generatePdfReportWithParams(
+                        reportDateRange, reportOrderType);
+                  } else {
+                    await _generateExcelReportWithParams(
+                        reportDateRange, reportOrderType);
+                  }
                 },
               ),
             ],
@@ -1710,6 +1878,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               })
           .toList();
 
+      // Count cancelled and refunded orders
+      int cancelledCount = 0;
+      int refundedCount = 0;
+      for (var doc in orders) {
+        final data = doc.data();
+        final status = (data['status'] as String?)?.toLowerCase() ?? '';
+        if (status == 'cancelled') cancelledCount++;
+        if (status == 'refunded') refundedCount++;
+      }
+
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
@@ -1726,6 +1904,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         avgOrderValue: avgOrderValue,
         topItems: topItemsList,
         orderTypeDistribution: orderTypeCounts,
+        cancelledCount: cancelledCount,
+        refundedCount: refundedCount,
         topRiders: topRidersList.isNotEmpty ? topRidersList : null,
         topCustomers: topCustomersList.isNotEmpty ? topCustomersList : null,
       );
@@ -1735,6 +1915,224 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error generating report: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateExcelReportWithParams(
+      DateTimeRange reportDateRange, String reportOrderType) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(color: Colors.green),
+      ),
+    );
+
+    try {
+      // Build query with passed parameters
+      Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+          .collection('Orders')
+          .where('timestamp',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(reportDateRange.start))
+          .where('timestamp',
+              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end))
+          .orderBy('timestamp', descending: true);
+
+      if (reportOrderType != 'all') {
+        query = query.where('Order_type', isEqualTo: reportOrderType);
+      }
+
+      final ordersSnapshot = await query.get();
+      final orders = ordersSnapshot.docs;
+
+      // Create Excel workbook
+      final excelFile = excel_lib.Excel.createExcel();
+
+      // ===== Summary Sheet =====
+      final summarySheet = excelFile['Summary'];
+
+      // Calculate KPIs
+      final totalOrders = orders.length;
+      final totalRevenue = orders.fold<double>(
+        0,
+        (sum, doc) {
+          final data = doc.data();
+          return sum + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
+        },
+      );
+      final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+
+      // Count cancelled and refunded
+      int cancelledCount = 0;
+      int refundedCount = 0;
+      for (var doc in orders) {
+        final data = doc.data();
+        final status = (data['status'] as String?)?.toLowerCase() ?? '';
+        if (status == 'cancelled') cancelledCount++;
+        if (status == 'refunded') refundedCount++;
+      }
+
+      // Write summary data
+      summarySheet
+          .appendRow([excel_lib.TextCellValue('Analytics Report Summary')]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Date Range'),
+        excel_lib.TextCellValue(
+            '${DateFormat('MMM dd, yyyy').format(reportDateRange.start)} - ${DateFormat('MMM dd, yyyy').format(reportDateRange.end)}')
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Order Type'),
+        excel_lib.TextCellValue(_formatOrderTypeForPieLabel(reportOrderType))
+      ]);
+      summarySheet.appendRow([excel_lib.TextCellValue('')]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Metric'),
+        excel_lib.TextCellValue('Value')
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Total Orders'),
+        excel_lib.IntCellValue(totalOrders)
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Total Revenue (QAR)'),
+        excel_lib.DoubleCellValue(totalRevenue)
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Average Order Value (QAR)'),
+        excel_lib.DoubleCellValue(avgOrderValue)
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Cancelled Orders'),
+        excel_lib.IntCellValue(cancelledCount)
+      ]);
+      summarySheet.appendRow([
+        excel_lib.TextCellValue('Refunded Orders'),
+        excel_lib.IntCellValue(refundedCount)
+      ]);
+
+      // ===== Orders Sheet =====
+      final ordersSheet = excelFile['Orders'];
+      ordersSheet.appendRow([
+        excel_lib.TextCellValue('Order ID'),
+        excel_lib.TextCellValue('Date'),
+        excel_lib.TextCellValue('Customer'),
+        excel_lib.TextCellValue('Order Type'),
+        excel_lib.TextCellValue('Status'),
+        excel_lib.TextCellValue('Total Amount (QAR)'),
+        excel_lib.TextCellValue('Payment Method'),
+      ]);
+
+      for (var doc in orders) {
+        final data = doc.data();
+        final timestamp = data['timestamp'] as Timestamp?;
+        ordersSheet.appendRow([
+          excel_lib.TextCellValue(doc.id),
+          excel_lib.TextCellValue(timestamp != null
+              ? DateFormat('yyyy-MM-dd HH:mm').format(timestamp.toDate())
+              : ''),
+          excel_lib.TextCellValue(data['customerName'] as String? ??
+              data['customer_name'] as String? ??
+              'Unknown'),
+          excel_lib.TextCellValue(_formatOrderTypeForPieLabel(
+              (data['Order_type'] as String?) ?? 'unknown')),
+          excel_lib.TextCellValue((data['status'] as String?) ?? 'unknown'),
+          excel_lib.DoubleCellValue(
+              (data['totalAmount'] as num?)?.toDouble() ?? 0),
+          excel_lib.TextCellValue(
+              (data['payment_method'] as String?) ?? 'unknown'),
+        ]);
+      }
+
+      // ===== Top Items Sheet =====
+      final itemsSheet = excelFile['Top Items'];
+      itemsSheet.appendRow([
+        excel_lib.TextCellValue('Item Name'),
+        excel_lib.TextCellValue('Quantity Sold'),
+        excel_lib.TextCellValue('Revenue (QAR)'),
+      ]);
+
+      final itemCounts = <String, int>{};
+      final itemRevenue = <String, double>{};
+      for (var doc in orders) {
+        final data = doc.data();
+        final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+        for (var item in items) {
+          final itemName = item['name'] ?? 'Unknown Item';
+          final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
+          final price = (item['price'] as num?)?.toDouble() ?? 0;
+          itemCounts.update(itemName, (v) => v + quantity,
+              ifAbsent: () => quantity);
+          itemRevenue.update(itemName, (v) => v + (price * quantity),
+              ifAbsent: () => price * quantity);
+        }
+      }
+      final sortedItems = itemCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      for (var item in sortedItems.take(20)) {
+        itemsSheet.appendRow([
+          excel_lib.TextCellValue(item.key),
+          excel_lib.IntCellValue(item.value),
+          excel_lib.DoubleCellValue(itemRevenue[item.key] ?? 0),
+        ]);
+      }
+
+      // Remove the default 'Sheet1'
+      excelFile.delete('Sheet1');
+
+      // Save file
+      final fileBytes = excelFile.save();
+      if (fileBytes == null) throw Exception('Failed to generate Excel file');
+
+      final fileName =
+          'Analytics_Report_${DateFormat('yyyyMMdd').format(DateTime.now())}.xlsx';
+
+      // Save to temp directory first, then share
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsBytes(fileBytes);
+
+      if (mounted) Navigator.pop(context);
+
+      // Open the file directly
+      final result = await OpenFile.open(filePath);
+
+      if (mounted) {
+        if (result.type == ResultType.done) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Opening Excel report...'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Could not open file: ${result.message}'), // Fallback if no app found
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () => OpenFile.open(filePath),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating Excel report: $e'),
             backgroundColor: Colors.red,
           ),
         );
