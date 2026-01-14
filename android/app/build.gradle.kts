@@ -12,7 +12,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mdd"
+    namespace = "com.zayka.admin"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "29.0.13599879"
 
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.mdd"
+        applicationId = "com.zayka.admin"
         minSdk = 31
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

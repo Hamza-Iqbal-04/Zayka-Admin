@@ -1,4 +1,4 @@
-package com.example.mdd
+package com.zayka.admin
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -260,6 +260,130 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21940943998:android:37e2baa846faf62cffec2f",
+        "android_client_info": {
+          "package_name": "com.zayka.admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmj3qZ0jDGNgOkOSfQfaDg8_JY1RpidQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "21940943998-03bqidg017cpvqiosi534aa0rs4b9gau.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.waiter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21940943998:android:ab7759204f346913ffec2f",
+        "android_client_info": {
+          "package_name": "com.zayka.customer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "21940943998-9sgpjsfh9ngud71mdb7etn5ehfuupmru.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zayka.customer",
+            "certificate_hash": "65f1b7f88a9cd0bf4cb735ff695b7f2bc63a801c"
+          }
+        },
+        {
+          "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmj3qZ0jDGNgOkOSfQfaDg8_JY1RpidQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "21940943998-03bqidg017cpvqiosi534aa0rs4b9gau.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.waiter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:21940943998:android:62de8a78ecee5a1dffec2f",
+        "android_client_info": {
+          "package_name": "com.zayka.driver"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "21940943998-53rorfsnk3fvtsok43f0poc19dha5pdf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zayka.driver",
+            "certificate_hash": "65f1b7f88a9cd0bf4cb735ff695b7f2bc63a801c"
+          }
+        },
+        {
+          "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmj3qZ0jDGNgOkOSfQfaDg8_JY1RpidQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "21940943998-c8dirt8p56grdb6o9i5hc4mus0uucro8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "21940943998-03bqidg017cpvqiosi534aa0rs4b9gau.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.waiter"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
