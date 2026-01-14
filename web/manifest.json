@@ -1,6 +1,6 @@
 {
-    "name": "mdd",
-    "short_name": "mdd",
+    "name": "Zayka Admin",
+    "short_name": "Zayka Admin",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
