@@ -563,6 +563,7 @@ class _CouponDialogState extends State<CouponDialog> {
   // Existing Controllers
   late TextEditingController _codeCtrl, _typeCtrl, _valueCtrl;
   late TextEditingController _minSubtotalCtrl, _maxDiscountCtrl;
+  late TextEditingController _maxUsesPerUserCtrl;
 
   // New Localized Controllers
   late TextEditingController _titleEnCtrl, _titleArCtrl;
@@ -589,6 +590,8 @@ class _CouponDialogState extends State<CouponDialog> {
         TextEditingController(text: data['min_subtotal']?.toString() ?? '');
     _maxDiscountCtrl =
         TextEditingController(text: data['max_discount']?.toString() ?? '0');
+    _maxUsesPerUserCtrl =
+        TextEditingController(text: data['maxUsesPerUser']?.toString() ?? '');
     _isActive = data['active'] ?? true;
 
     // Initialize New Arabic/English fields
@@ -637,6 +640,7 @@ class _CouponDialogState extends State<CouponDialog> {
     _valueCtrl.dispose();
     _minSubtotalCtrl.dispose();
     _maxDiscountCtrl.dispose();
+    _maxUsesPerUserCtrl.dispose();
     _titleEnCtrl.dispose();
     _titleArCtrl.dispose();
     _descEnCtrl.dispose();
@@ -718,37 +722,21 @@ class _CouponDialogState extends State<CouponDialog> {
 
                   // --- NEW SECTION: Display Info (Localized) ---
                   _formSectionHeader('Display Info'),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _roundedInput(
-                            _titleEnCtrl, 'Title (English)', Icons.title,
-                            validator: (v) => v!.isEmpty ? 'Required' : null),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _roundedInput(
-                            _titleArCtrl, 'Title (Arabic)', Icons.translate,
-                            textDirection: TextDirection.rtl),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _roundedInput(_descEnCtrl,
-                            'Description (English)', Icons.description),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _roundedInput(_descArCtrl,
-                            'Description (Arabic)', Icons.description,
-                            textDirection: TextDirection.rtl),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
+                  _roundedInput(_titleEnCtrl, 'Title (English)', Icons.title,
+                      validator: (v) => v!.isEmpty ? 'Required' : null),
+                  const SizedBox(height: 16),
+                  _roundedInput(_titleArCtrl, 'Title (Arabic)', Icons.translate,
+                      textDirection: TextDirection.rtl),
+                  const SizedBox(height: 24),
+
+                  _roundedInput(
+                      _descEnCtrl, 'Description (English)', Icons.description),
+                  const SizedBox(height: 16),
+                  _roundedInput(
+                      _descArCtrl, 'Description (Arabic)', Icons.description,
+                      textDirection: TextDirection.rtl),
+                  const SizedBox(height: 32),
 
                   _formSectionHeader('Coupon Logic'),
                   _roundedInput(
@@ -767,7 +755,7 @@ class _CouponDialogState extends State<CouponDialog> {
                       type: TextInputType.number,
                       validator: (v) =>
                           v == null || v.isEmpty ? 'Value required' : null),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
                   // Branches
                   _formSectionHeader('Applicable Branches'),
@@ -782,6 +770,11 @@ class _CouponDialogState extends State<CouponDialog> {
 
                   _roundedInput(
                       _maxDiscountCtrl, 'Maximum Discount', Icons.money_off,
+                      type: TextInputType.number),
+                  const SizedBox(height: 16),
+
+                  _roundedInput(_maxUsesPerUserCtrl, 'Max Uses Per User',
+                      Icons.person_outline,
                       type: TextInputType.number),
                   const SizedBox(height: 24),
 
@@ -946,29 +939,50 @@ class _CouponDialogState extends State<CouponDialog> {
   Widget _roundedInput(TextEditingController c, String label, IconData icon,
       {String? Function(String?)? validator,
       TextInputType? type,
-      TextDirection? textDirection}) {
+      TextDirection? textDirection,
+      int maxLines = 1}) {
     return TextFormField(
       controller: c,
       keyboardType: type,
       validator: validator,
       textDirection: textDirection,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.deepPurple),
+        labelStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+        prefixIcon: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: Colors.deepPurple, size: 20),
+        ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 40),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey[200]!),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey[200]!),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
+        floatingLabelStyle: const TextStyle(
+            color: Colors.deepPurple, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -1064,6 +1078,7 @@ class _CouponDialogState extends State<CouponDialog> {
       'value': num.tryParse(_valueCtrl.text) ?? 0,
       'min_subtotal': num.tryParse(_minSubtotalCtrl.text) ?? 0,
       'max_discount': num.tryParse(_maxDiscountCtrl.text) ?? 0,
+      'maxUsesPerUser': num.tryParse(_maxUsesPerUserCtrl.text) ?? 0,
       'valid_from': _validFrom ?? DateTime.now(),
       'valid_until': _validUntil ?? DateTime.now(),
       'active': _isActive,

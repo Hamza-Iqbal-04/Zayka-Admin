@@ -106,54 +106,59 @@ class _RidersScreenState extends State<RidersScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Enhanced Search Section
-          Container(
-            margin: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.deepPurple.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search drivers by name or email...',
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            children: [
+              // Enhanced Search Section
+              Container(
+                margin: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                filled: true,
-                fillColor: Colors.white,
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: Colors.deepPurple.shade300,
-                  size: 24,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search drivers by name or email...',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: Colors.deepPurple.shade300,
+                      size: 24,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                  ),
+                  onChanged: (query) {
+                    setState(() {
+                      _searchQuery = query.toLowerCase();
+                    });
+                  },
                 ),
               ),
-              onChanged: (query) {
-                setState(() {
-                  _searchQuery = query.toLowerCase();
-                });
-              },
-            ),
+              _buildEnhancedStatusFilter(),
+              Expanded(
+                child: _buildEnhancedDriversList(userScope),
+              ),
+            ],
           ),
-          _buildEnhancedStatusFilter(),
-          Expanded(
-            child: _buildEnhancedDriversList(userScope),
-          ),
-        ],
+        ),
       ),
     );
   }

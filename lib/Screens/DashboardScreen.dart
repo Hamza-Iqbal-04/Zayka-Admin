@@ -78,18 +78,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (showBranchSelector) _buildBranchSelector(userScope, branchFilter),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildEnhancedStatCardsGrid(context),
-            const SizedBox(height: 32),
-            _buildSectionHeader(
-                'Recent Orders (Current Shift)', Icons.receipt_long_outlined),
-            const SizedBox(height: 16),
-            _buildEnhancedRecentOrdersSection(context),
-          ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildEnhancedStatCardsGrid(context),
+                const SizedBox(height: 32),
+                _buildSectionHeader('Recent Orders (Current Shift)',
+                    Icons.receipt_long_outlined),
+                const SizedBox(height: 16),
+                _buildEnhancedRecentOrdersSection(context),
+              ],
+            ),
+          ),
         ),
       ),
     );

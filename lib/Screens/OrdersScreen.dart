@@ -250,18 +250,23 @@ class _OrdersScreenState extends State<OrdersScreen>
           child: _buildOrderTypeTabs(),
         ),
       ),
-      body: Column(
-        children: [
-          _buildEnhancedStatusFilterBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: _orderTypeMap.values.map((orderTypeKey) {
-                return _buildOrdersList(orderTypeKey);
-              }).toList(),
-            ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            children: [
+              _buildEnhancedStatusFilterBar(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: _orderTypeMap.values.map((orderTypeKey) {
+                    return _buildOrdersList(orderTypeKey);
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

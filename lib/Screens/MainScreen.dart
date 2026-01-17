@@ -12,6 +12,7 @@ import 'OrdersScreen.dart';
 import 'RidersScreen.dart';
 import 'SettingsScreen.dart';
 import 'RestaurantTimingScreen.dart';
+import '../utils/responsive_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -496,6 +497,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ? userScope.branchId.replaceAll('_', ' ')
             : 'Admin Panel';
 
+    final bool isMobile = ResponsiveHelper.isMobile(context);
+
     if (_navItems.isEmpty || _screens.isEmpty) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -506,95 +509,61 @@ class _HomeScreenState extends State<HomeScreen> {
       _currentIndex = 0;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(appBarTitle),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+    final Widget mainBody = Column(
+      children: [
+        // 🔴 CLOSING SOON BANNER
+        if (timeUntilClose != null)
+          Container(
+            width: double.infinity,
+            color: Colors.orange,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (statusService.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.deepPurple),
-                    ),
-                  )
-                else
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusService.isOpen
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: statusService.isOpen ? Colors.green : Colors.red,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      statusService.statusText.toUpperCase(),
-                      style: TextStyle(
-                        color: statusService.isOpen ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
+                const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 20),
                 const SizedBox(width: 8),
-                _buildRestaurantToggle(statusService),
-                const SizedBox(width: 8),
+                Text(
+                  'Closing in ${_formatDuration(timeUntilClose)}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
-          if (userScope.can(Permissions.canManageSettings))
-            IconButton(
-              tooltip: 'Settings',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-              icon: Icon(
-                Icons.settings_rounded,
-                size: 22,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // 🔴 CLOSING SOON BANNER
-          if (timeUntilClose != null)
-            Container(
-              width: double.infinity,
-              color: Colors.orange,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Closing in ${_formatDuration(timeUntilClose)}',
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
 
-          Expanded(child: _screens[_currentIndex]),
-        ],
-      ),
+        Expanded(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: _screens[_currentIndex],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (!isMobile) {
+      return Scaffold(
+        body: Row(
+          children: [
+            _buildSidebar(context),
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(
+              child: Scaffold(
+                appBar: _buildAppBar(appBarTitle, statusService, userScope,
+                    isMobile: false),
+                body: mainBody,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: _buildAppBar(appBarTitle, statusService, userScope),
+      body: mainBody,
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
@@ -605,6 +574,290 @@ class _HomeScreenState extends State<HomeScreen> {
         showUnselectedLabels: true,
         selectedFontSize: 12,
         unselectedFontSize: 12,
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(String appBarTitle,
+      RestaurantStatusService statusService, UserScopeService userScope,
+      {bool isMobile = true}) {
+    return AppBar(
+      title: Text(appBarTitle),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            children: [
+              if (statusService.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.deepPurple),
+                  ),
+                )
+              else
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusService.isOpen
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: statusService.isOpen ? Colors.green : Colors.red,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    statusService.statusText.toUpperCase(),
+                    style: TextStyle(
+                      color: statusService.isOpen ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+              _buildRestaurantToggle(statusService),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+        // Only show Settings icon in app bar on mobile
+        if (isMobile && userScope.can(Permissions.canManageSettings))
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+            icon: Icon(
+              Icons.settings_rounded,
+              size: 22,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context) {
+    return Container(
+      width: 280,
+      color: Colors.white,
+      child: Column(
+        children: [
+          _buildSidebarHeader(),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+              itemCount: _navItems.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = _navItems[index];
+                final isSelected = _currentIndex == index;
+                return _buildSidebarItem(item, isSelected, index);
+              },
+            ),
+          ),
+          // Settings item in sidebar
+          _buildSettingsSidebarItem(),
+          const Divider(height: 1),
+          _buildSidebarFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      alignment: Alignment.centerLeft,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.admin_panel_settings,
+                color: Colors.deepPurple, size: 32),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Text(
+              'Zayka Admin',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(
+      BottomNavigationBarItem item, bool isSelected, int index) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => setState(() => _currentIndex = index),
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.deepPurple.withOpacity(0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? Colors.deepPurple.withOpacity(0.2)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            children: [
+              IconTheme(
+                data: IconThemeData(
+                  color: isSelected ? Colors.deepPurple : Colors.grey[600],
+                  size: 24,
+                ),
+                child: isSelected ? item.activeIcon : item.icon,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  item.label ?? '',
+                  style: TextStyle(
+                    color: isSelected ? Colors.deepPurple : Colors.grey[800],
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const Icon(Icons.chevron_right,
+                    size: 16, color: Colors.deepPurple),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsSidebarItem() {
+    final userScope = context.read<UserScopeService>();
+    if (!userScope.can(Permissions.canManageSettings)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.withOpacity(0.1)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.settings_rounded, size: 24, color: Colors.grey[600]),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Settings',
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarFooter() {
+    final userScope = context.read<UserScopeService>();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                child: const Icon(Icons.person, color: Colors.deepPurple),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userScope.userEmail.split('@').first,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      userScope.isSuperAdmin ? 'Super Admin' : 'Branch Admin',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                // Implement logout or switch branch logic if needed
+              },
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Logout'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

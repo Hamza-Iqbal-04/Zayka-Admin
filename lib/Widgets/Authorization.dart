@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,17 +16,22 @@ class AuthService {
   Future<String?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
-      await _auth.setPersistence(Persistence.LOCAL); // ✅ Ensure persistence
+      if (kIsWeb) {
+        await _auth.setPersistence(
+            Persistence.LOCAL); // ✅ Ensure persistence only on web
+      }
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       return null;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+    } on FirebaseException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
         return 'Invalid email or password.';
       } else {
-        return 'An error occurred. Please try again.';
+        return 'An error occurred. Please try again. (${e.code})';
       }
     } catch (e) {
-      return 'An unexpected error occurred.';
+      return 'An unexpected error occurred: $e';
     }
   }
 
