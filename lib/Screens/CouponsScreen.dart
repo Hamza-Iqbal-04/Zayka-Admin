@@ -1037,7 +1037,8 @@ class _CouponDialogState extends State<CouponDialog> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
     final data = _formData(newCoupon: true);
-    await FirebaseFirestore.instance.collection('coupons').add(data);
+    final code = _codeCtrl.text.trim();
+    await FirebaseFirestore.instance.collection('coupons').doc(code).set(data);
     setState(() => _loading = false);
     if (mounted) {
       Navigator.pop(context);
