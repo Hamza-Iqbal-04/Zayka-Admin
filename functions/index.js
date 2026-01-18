@@ -2472,3 +2472,146 @@ exports.cleanupStuckRiders = onSchedule("every 10 minutes", async (event) => {
         logger.error('🔥 Error in cleanupStuckRiders:', error);
     }
 });
+
+/**
+ * =============================================================================
+ * FUNCTION: NOTIFY CUSTOMER - PICKUP ORDER READY
+ * =============================================================================
+ * Triggered when an order's status changes to 'prepared' for pickup/takeaway orders.
+ * Sends a push notification to the customer's device to let them know their order
+ * is ready for collection.
+ * 
+ * TRIGGER CONDITIONS:
+ * - Order status changes TO 'prepared'
+ * - Order type is 'pickup' OR 'takeaway'
+ * - Customer has a valid FCM token
+ * =============================================================================
+ */
+exports.notifyCustomerPickupReady = onDocumentUpdated(
+    { document: "Orders/{orderId}", region: GCP_LOCATION },
+    async (event) => {
+        const beforeData = event.data.before.data();
+        const afterData = event.data.after.data();
+        const orderId = event.params.orderId;
+
+        // --- GUARD 1: Status must have changed TO 'prepared' ---
+        const beforeStatus = normalizeStatus(beforeData.status);
+        const afterStatus = normalizeStatus(afterData.status);
+
+        if (beforeStatus === STATUS.PREPARED || afterStatus !== STATUS.PREPARED) {
+            return null; // Not a transition to 'prepared'
+        }
+
+        // --- GUARD 2: Only for pickup/takeaway orders (not delivery, not dine-in) ---
+        const rawOrderType = afterData.Order_type || afterData.orderType || '';
+        const orderType = normalizeOrderType(rawOrderType);
+
+        if (orderType !== ORDER_TYPE.PICKUP && orderType !== ORDER_TYPE.TAKEAWAY) {
+            return null; // Not a pickup/takeaway order
+        }
+
+        logger.log(`[${orderId}] 📦 PICKUP ORDER READY - Notifying customer (type: ${orderType})`);
+
+        try {
+            // --- STEP 1: Get customer email from order ---
+            const customerEmail = afterData.userEmail || afterData.email || afterData.customerEmail;
+
+            if (!customerEmail) {
+                logger.warn(`[${orderId}] ❌ No customer email found on order`);
+                return null;
+            }
+
+            // --- STEP 2: Get customer's FCM token from Users collection ---
+            const userDoc = await db.collection('Users').doc(customerEmail).get();
+
+            if (!userDoc.exists) {
+                logger.warn(`[${orderId}] ❌ User document not found for: ${customerEmail}`);
+                return null;
+            }
+
+            const userData = userDoc.data();
+            const fcmToken = userData.fcmToken;
+
+            if (!fcmToken) {
+                logger.warn(`[${orderId}] ❌ No FCM token for customer: ${customerEmail}`);
+                return null;
+            }
+
+            // --- STEP 3: Build and send FCM notification ---
+            const orderNumber = afterData.dailyOrderNumber || orderId.substring(0, 6).toUpperCase();
+            const branchName = afterData.branchName || 'the restaurant';
+
+            const message = {
+                token: fcmToken,
+                notification: {
+                    title: '🎉 Your Order is Ready!',
+                    body: `Order #${orderNumber} is prepared and waiting for you at ${branchName}.`
+                },
+                data: {
+                    type: 'pickup_ready',
+                    orderId: orderId,
+                    orderNumber: String(orderNumber),
+                    click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                    // For background handling
+                    title: '🎉 Your Order is Ready!',
+                    body: `Order #${orderNumber} is prepared and waiting for you at ${branchName}.`
+                },
+                android: {
+                    priority: 'high',
+                    notification: {
+                        channelId: 'order_updates',
+                        priority: 'high',
+                        sound: 'default',
+                        clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+                    }
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            alert: {
+                                title: '🎉 Your Order is Ready!',
+                                body: `Order #${orderNumber} is prepared and waiting for you at ${branchName}.`
+                            },
+                            sound: 'default',
+                            badge: 1
+                        }
+                    }
+                }
+            };
+
+            await admin.messaging().send(message);
+            logger.log(`[${orderId}] ✅ Sent PICKUP READY notification to customer: ${customerEmail}`);
+
+            // --- STEP 4: Mark notification as sent on order (optional, for tracking) ---
+            await event.data.after.ref.update({
+                'pickupReadyNotificationSent': true,
+                'pickupReadyNotificationAt': FieldValue.serverTimestamp()
+            });
+
+            return null;
+
+        } catch (error) {
+            // Handle invalid FCM token (token expired or app uninstalled)
+            if (error.code === 'messaging/registration-token-not-registered' ||
+                error.code === 'messaging/invalid-registration-token') {
+                logger.warn(`[${orderId}] Customer FCM token is invalid/expired. Cleaning up...`);
+                // Optionally clean up invalid token from user document
+                try {
+                    const customerEmail = afterData.userEmail || afterData.email || afterData.customerEmail;
+                    if (customerEmail) {
+                        await db.collection('Users').doc(customerEmail).update({
+                            'fcmToken': FieldValue.delete()
+                        });
+                        logger.log(`[${orderId}] Removed invalid FCM token for: ${customerEmail}`);
+                    }
+                } catch (cleanupErr) {
+                    logger.warn(`[${orderId}] Failed to cleanup invalid token: ${cleanupErr.message}`);
+                }
+                return null;
+            }
+
+            logger.error(`[${orderId}] ❌ Error sending pickup ready notification:`, error);
+            return null;
+        }
+    }
+);

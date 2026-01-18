@@ -37,8 +37,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: initializationSettingsAndroid);
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
@@ -52,13 +53,16 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
 
-  String title = message.data['title'] ??
+  String title =
+      message.data['title'] ??
       message.notification?.title ??
       "New Order Received";
-  String body = message.data['body'] ??
+  String body =
+      message.data['body'] ??
       message.notification?.body ??
       "Open app to view details";
 
@@ -90,52 +94,59 @@ int getStableId(String id) {
 
 void main() async {
   // Wrap entire app in error zone for global error handling
-  runZonedGuarded<Future<void>>(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded<Future<void>>(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // ✅ Initialize Firebase App Check for security
-    // This protects Firebase resources from abuse by verifying requests
-    // come from your authentic app on genuine devices
-    // NOTE: Web uses reCAPTCHA v3 (FREE). For web, App Check is optional since
-    // Firestore Security Rules provide the primary protection.
-    try {
-      await FirebaseAppCheck.instance.activate(
-        // Use debug provider for development, real attestation for release
-        androidProvider:
-            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-        appleProvider:
-            kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-        // Web: Uses free reCAPTCHA v3 - just leave null/skip if not configured
-        // Your Firestore Rules already protect the data
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
       );
-      debugPrint('✅ Firebase App Check initialized');
-    } catch (e) {
-      // App Check is optional - app works without it (Firestore Rules protect data)
-      debugPrint('⚠️ App Check not configured: $e');
-    }
 
-    // Initialize Crashlytics for error reporting
-    // FlutterError handler for framework errors
-    FlutterError.onError = (errorDetails) {
-      debugPrint('🔴 Flutter Error: ${errorDetails.exceptionAsString()}');
+      // ✅ Initialize Firebase App Check for security
+      // This protects Firebase resources from abuse by verifying requests
+      // come from your authentic app on genuine devices
+      // NOTE: Web uses reCAPTCHA v3 (FREE). For web, App Check is optional since
+      // Firestore Security Rules provide the primary protection.
+      try {
+        await FirebaseAppCheck.instance.activate(
+          // Use debug provider for development, real attestation for release
+          androidProvider: kDebugMode
+              ? AndroidProvider.debug
+              : AndroidProvider.playIntegrity,
+          appleProvider: kDebugMode
+              ? AppleProvider.debug
+              : AppleProvider.appAttest,
+          // Web: Uses free reCAPTCHA v3 - just leave null/skip if not configured
+          // Your Firestore Rules already protect the data
+        );
+        debugPrint('✅ Firebase App Check initialized');
+      } catch (e) {
+        // App Check is optional - app works without it (Firestore Rules protect data)
+        debugPrint('⚠️ App Check not configured: $e');
+      }
+
+      // Initialize Crashlytics for error reporting
+      // FlutterError handler for framework errors
+      FlutterError.onError = (errorDetails) {
+        debugPrint('🔴 Flutter Error: ${errorDetails.exceptionAsString()}');
+        // In production, send to Crashlytics:
+        // FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
+
+      runApp(const MyApp());
+    },
+    (error, stackTrace) {
+      // Global error handler for async errors
+      debugPrint('🔴 Unhandled Error: $error');
+      debugPrint('Stack trace: $stackTrace');
       // In production, send to Crashlytics:
-      // FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-    };
-
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    runApp(const MyApp());
-  }, (error, stackTrace) {
-    // Global error handler for async errors
-    debugPrint('🔴 Unhandled Error: $error');
-    debugPrint('Stack trace: $stackTrace');
-    // In production, send to Crashlytics:
-    // FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
-  });
+      // FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -147,12 +158,14 @@ class MyApp extends StatelessWidget {
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider<UserScopeService>(
-            create: (_) => UserScopeService()),
+          create: (_) => UserScopeService(),
+        ),
         ChangeNotifierProvider<OrderNotificationService>(
-            create: (_) => OrderNotificationService()),
+          create: (_) => OrderNotificationService(),
+        ),
         ChangeNotifierProvider<RestaurantStatusService>(
-            create: (_) => RestaurantStatusService()),
-        ChangeNotifierProvider(create: (_) => BadgeCountProvider()),
+          create: (_) => RestaurantStatusService(),
+        ),
         ChangeNotifierProvider(create: (_) => BadgeCountProvider()),
         ChangeNotifierProxyProvider<UserScopeService, BranchFilterService>(
           create: (_) => BranchFilterService(),
@@ -262,8 +275,10 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
     final statusService = context.read<RestaurantStatusService>();
     final authService = context.read<AuthService>();
 
-    final bool isSuccess =
-        await scopeService.loadUserScope(widget.user, authService);
+    final bool isSuccess = await scopeService.loadUserScope(
+      widget.user,
+      authService,
+    );
 
     if (isSuccess && mounted) {
       if (scopeService.branchId.isNotEmpty) {
@@ -272,8 +287,10 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
           restaurantName =
               "Restaurant (${scopeService.userEmail.split('@').first})";
         }
-        statusService.initialize(scopeService.branchId,
-            restaurantName: restaurantName);
+        statusService.initialize(
+          scopeService.branchId,
+          restaurantName: restaurantName,
+        );
       }
 
       notificationService.init(scopeService, navigatorKey);
@@ -286,7 +303,9 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
         // Small delay to ensure UI is fully ready
         await Future.delayed(const Duration(milliseconds: 500));
         FcmService.processPendingNotification(
-            notificationService, scopeService);
+          notificationService,
+          scopeService,
+        );
       }
 
       await _requestInitialPermissions();
