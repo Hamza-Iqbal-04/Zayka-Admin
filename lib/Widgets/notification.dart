@@ -217,9 +217,10 @@ class OrderNotificationService with ChangeNotifier {
               });
             },
             onAccept: () async {
-              try {
-                String acceptedBy = scopeService.userEmail.isNotEmpty
-                    ? scopeService.userEmail
+               try {
+                // ✅ Support both email and phone users
+                String acceptedBy = scopeService.userIdentifier.isNotEmpty
+                    ? scopeService.userIdentifier
                     : 'Admin';
                 final docRef = FirebaseFirestore.instance
                     .collection('Orders')
@@ -271,10 +272,11 @@ class OrderNotificationService with ChangeNotifier {
               }
             },
             onReject: (reason) async {
-              try {
+               try {
                 await RiderAssignmentService.cancelAutoAssignment(orderId);
-                String rejectedBy = scopeService.userEmail.isNotEmpty
-                    ? scopeService.userEmail
+                // ✅ Support both email and phone users
+                String rejectedBy = scopeService.userIdentifier.isNotEmpty
+                    ? scopeService.userIdentifier
                     : 'Admin';
                 await FirebaseFirestore.instance
                     .collection('Orders')

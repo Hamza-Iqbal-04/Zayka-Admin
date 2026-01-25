@@ -34,9 +34,9 @@ class FcmService {
     return data;
   }
 
-  Future<void> init(String adminEmail) async {
+  Future<void> init(String userIdentifier) async {
     if (_isInitialized) return;
-    _currentEmail = adminEmail;
+    _currentEmail = userIdentifier; // Still using _currentEmail internally for backward compat
 
     try {
       // 1. Initialize Local Notifications
@@ -76,12 +76,12 @@ class FcmService {
 
       // 3. Save Token (Strict Subcollection Mode)
       final token = await _fcm.getToken();
-      if (token != null && adminEmail.isNotEmpty) {
-        await _saveTokenToDatabase(adminEmail, token);
+      if (token != null && userIdentifier.isNotEmpty) {
+        await _saveTokenToDatabase(userIdentifier, token);
 
         // Listen for token refreshes
         _fcm.onTokenRefresh.listen((newToken) {
-          _saveTokenToDatabase(adminEmail, newToken);
+          _saveTokenToDatabase(userIdentifier, newToken);
         });
       }
 

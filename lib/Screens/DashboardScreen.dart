@@ -235,11 +235,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             : 2;
 
     // Adjust Aspect Ratio based on screen size to prevent stretching
+    // Lower aspect ratio = taller cards (more vertical space)
     double childAspectRatio = ResponsiveHelper.isDesktop(context)
         ? 1.5
         : ResponsiveHelper.isTablet(context)
             ? 1.3
-            : 1.3;
+            : 1.1; // ✅ Reduced from 1.3 to 1.1 to prevent overflow on mobile
 
     return Container(
       decoration: BoxDecoration(
@@ -935,7 +936,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
         orderId,
         newStatus,
         reason: cancellationReason,
-        currentUserEmail: userScope.userEmail,
+        currentUserEmail: userScope.userIdentifier, // ✅ Support phone users
       );
 
       if (mounted) {

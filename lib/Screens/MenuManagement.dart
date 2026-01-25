@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'BranchManagement.dart';
 import '../main.dart';
 import '../utils/responsive_helper.dart'; // âœ… Added
+import '../services/image_upload_service.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -215,18 +216,42 @@ class _CategoriesTabState extends State<_CategoriesTab> {
         }
 
         if (snapshot.hasError) {
+          // ✅ CRITICAL FIX: Improved error handling with retry
+          debugPrint('Categories StreamBuilder error: ${snapshot.error}');
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Unable to load categories',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check your connection and try again',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => setState(() {}), // Trigger rebuild
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -1115,18 +1140,42 @@ class _MenuItemsTabState extends State<_MenuItemsTab> {
         }
 
         if (snapshot.hasError) {
+          // ✅ CRITICAL FIX: Improved error handling with retry
+          debugPrint('MenuItems StreamBuilder error: ${snapshot.error}');
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 64, color: Colors.red[300]),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Unable to load menu items',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check your connection and try again',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => setState(() {}), // Trigger rebuild
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -1783,7 +1832,7 @@ class _MenuItemCard extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.transparent,
         child: Container(
@@ -1906,21 +1955,6 @@ class _MenuItemCard extends StatelessWidget {
                         ),
                       ),
                     Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                    ),
-                    Positioned(
                       bottom: 0,
                       left: 0,
                       right: 0,
@@ -1981,6 +2015,21 @@ class _MenuItemCard extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.close_rounded,
+                              color: Colors.white),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
                         ),
                       ),
                     ),
@@ -2191,7 +2240,7 @@ class _MenuItemCard extends StatelessWidget {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                Navigator.pop(context);
+                                Navigator.of(dialogContext).pop();
                                 onEdit();
                               },
                               icon: const Icon(Icons.edit_outlined, size: 18),
@@ -2212,7 +2261,7 @@ class _MenuItemCard extends StatelessWidget {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                Navigator.pop(context);
+                                Navigator.of(dialogContext).pop();
                                 onDelete();
                               },
                               icon: const Icon(Icons.delete_outline, size: 18),
@@ -2387,6 +2436,15 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     _selectedBranchIds = List<String>.from(data['branchIds'] ?? []);
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _nameArController.dispose();
+    _imageUrlController.dispose();
+    _sortOrderController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveCategory() async {
     if (!_formKey.currentState!.validate()) return;
     if (!mounted) return;
@@ -2413,7 +2471,15 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         return;
       }
     } else {
-      branchIdsToSave = [userScope.branchId!];
+      // ✅ CRITICAL FIX: Safe null handling for branchId
+      final branchId = userScope.branchId;
+      if (branchId == null) {
+        if (!mounted) return;
+        _showError('No branch assigned. Please contact administrator.');
+        setState(() => _isLoading = false);
+        return;
+      }
+      branchIdsToSave = [branchId];
     }
 
     final data = {
@@ -2861,14 +2927,20 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
   late TextEditingController _estimatedTimeController;
   late TextEditingController _sortOrderController;
   late TextEditingController _discountedPriceController;
+  late TextEditingController _caloriesController;
   late bool _isAvailable;
   late bool _isPopular;
   late bool _isOutOfStock;
   late bool _isHealthy;
   late bool _isSpicy;
+  late bool _isVeg;
+  int _preparationTime = 15;
   String? _selectedCategoryId;
   late List<String> _selectedBranchIds;
   bool _isLoading = false;
+
+  // Preparation time options in 5-minute intervals
+  static const List<int> _prepTimeOptions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
   final List<Map<String, dynamic>> _variants = [];
   final Map<String, bool> _tags = {
@@ -2910,8 +2982,12 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
 
     _isAvailable = data['isAvailable'] ?? true;
     _isPopular = data['isPopular'] ?? false;
-    _isHealthy = data['tags']?['isHealthy'] ?? false;
-    _isSpicy = data['tags']?['isSpicy'] ?? false;
+    _isHealthy = data['tags']?['Healthy'] ?? false;
+    _isSpicy = data['tags']?['Spicy'] ?? false;
+    _isVeg = data['isVeg'] ?? false;
+    _preparationTime = (data['preparationTime'] as num?)?.toInt() ?? 15;
+    _caloriesController = TextEditingController(
+        text: (data['calories'] as num?)?.toString() ?? '');
     _selectedCategoryId = data['categoryId'];
     _selectedBranchIds = List<String>.from(data['branchIds'] ?? []);
 
@@ -2936,6 +3012,21 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
         currentBranch != null && outOfStockBranches.contains(currentBranch);
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _nameArController.dispose();
+    _descController.dispose();
+    _descArController.dispose();
+    _priceController.dispose();
+    _imageUrlController.dispose();
+    _estimatedTimeController.dispose();
+    _sortOrderController.dispose();
+    _discountedPriceController.dispose();
+    _caloriesController.dispose();
+    super.dispose();
+  }
+
   Future<void> _saveMenuItem() async {
     if (!_formKey.currentState!.validate()) return;
     if (!mounted) return;
@@ -2955,7 +3046,15 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
         return;
       }
     } else {
-      branchIdsToSave = [userScope.branchId!];
+      // ✅ CRITICAL FIX: Safe null handling for branchId
+      final branchId = userScope.branchId;
+      if (branchId == null) {
+        if (!mounted) return;
+        _showError('No branch assigned. Please contact administrator.');
+        setState(() => _isLoading = false);
+        return;
+      }
+      branchIdsToSave = [branchId];
     }
 
     final Map<String, Map<String, dynamic>> variantsMap = {};
@@ -2987,6 +3086,9 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
       'sortOrder': int.tryParse(_sortOrderController.text) ?? 0,
       'isAvailable': _isAvailable,
       'isPopular': _isPopular,
+      'isVeg': _isVeg,
+      'calories': int.tryParse(_caloriesController.text.trim()),
+      'preparationTime': _preparationTime,
       'categoryId': _selectedCategoryId,
       'branchIds': branchIdsToSave,
       'tags': _tags,
@@ -3014,8 +3116,9 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
       } else {
         // For CREATE, we use the list logic because there is no document to race against.
         // If we are creating as a specific branch admin (and marking it OOS immediately):
-        if (_isOutOfStock && userScope.branchId != null) {
-          data['outOfStockBranches'] = [userScope.branchId!];
+        final branchId = userScope.branchId;
+        if (_isOutOfStock && branchId != null) {
+          data['outOfStockBranches'] = [branchId];
         } else {
           data['outOfStockBranches'] = [];
         }
@@ -3474,17 +3577,61 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    // Calories and Preparation Time in one row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _caloriesController,
+                            decoration: const InputDecoration(
+                              labelText: 'Calories',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                              suffixText: 'kcal',
+                              helperText: 'Optional',
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _preparationTime,
+                            decoration: const InputDecoration(
+                              labelText: 'Prep Time *',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            items: _prepTimeOptions.map((time) {
+                              return DropdownMenuItem<int>(
+                                value: time,
+                                child: Text('$time mins'),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _preparationTime = value);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
                           child: TextFormField(
                             controller: _estimatedTimeController,
                             decoration: const InputDecoration(
-                              labelText: 'Prep Time (mins)',
+                              labelText: 'Est. Delivery Time',
                               border: OutlineInputBorder(),
                               filled: true,
                               fillColor: Colors.white,
                               suffixText: 'mins',
+                              helperText: 'e.g., 25-35',
                             ),
                             keyboardType: TextInputType.text,
                           ),
@@ -3498,7 +3645,7 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                               border: OutlineInputBorder(),
                               filled: true,
                               fillColor: Colors.white,
-                              helperText: 'Lower numbers appear first',
+                              helperText: 'Lower = first',
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -3712,16 +3859,84 @@ class _MenuItemDialogState extends State<_MenuItemDialog> {
                       ),
                       child: Column(
                         children: [
+                          // Veg/Non-Veg Toggle with visual indicator
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _isVeg ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _isVeg ? Colors.green : Colors.red,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              title: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: _isVeg ? Colors.green : Colors.red,
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Center(
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: _isVeg ? Colors.green : Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _isVeg ? 'Vegetarian' : 'Non-Vegetarian',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: _isVeg ? Colors.green[700] : Colors.red[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              value: _isVeg,
+                              onChanged: (val) {
+                                setState(() {
+                                  _isVeg = val;
+                                  _tags['Vegetarian'] = val;
+                                });
+                              },
+                              activeColor: Colors.green,
+                              inactiveTrackColor: Colors.red.withOpacity(0.3),
+                            ),
+                          ),
                           _buildToggleRow(
                               'Healthy Item',
                               _isHealthy,
                               Icons.fitness_center,
-                              (val) => setState(() => _isHealthy = val)),
+                              (val) {
+                                setState(() {
+                                  _isHealthy = val;
+                                  _tags['Healthy'] = val;
+                                });
+                              }),
                           _buildToggleRow(
                               'Spicy Item',
                               _isSpicy,
                               Icons.local_fire_department,
-                              (val) => setState(() => _isSpicy = val)),
+                              (val) {
+                                setState(() {
+                                  _isSpicy = val;
+                                  _tags['Spicy'] = val;
+                                });
+                              }),
                           _buildToggleRow(
                               'Popular Item',
                               _isPopular,

@@ -132,9 +132,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (scopeService.branchId.isNotEmpty && !_isRestaurantStatusInitialized) {
       String restaurantName = "Branch ${scopeService.branchId}";
-      if (scopeService.userEmail.isNotEmpty) {
-        restaurantName =
-            "Restaurant (${scopeService.userEmail.split('@').first})";
+      // ✅ Support both email and phone users for display
+      if (scopeService.userIdentifier.isNotEmpty) {
+        final displayName = scopeService.userEmail.isNotEmpty
+            ? scopeService.userEmail.split('@').first
+            : scopeService.userIdentifier; // Phone number
+        restaurantName = "Restaurant ($displayName)";
       }
 
       statusService.initialize(scopeService.branchId,
@@ -820,8 +823,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ✅ Support both email and phone users for display
                     Text(
-                      userScope.userEmail.split('@').first,
+                      userScope.userEmail.isNotEmpty
+                          ? userScope.userEmail.split('@').first
+                          : userScope.userIdentifier, // Phone number
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -1044,43 +1050,112 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
     setState(() => _togglingIds.add(branchId));
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('Branch')
-          .doc(branchId)
-          .get();
-      final data = doc.data() ?? {};
-      final workingHours = data['workingHours'] as Map<String, dynamic>? ?? {};
+      // Use centralized helper for accurate timezone-aware schedule check
+      final scheduleStatus = await RestaurantStatusService.checkBranchScheduleStatus(branchId);
+      final isScheduleOpen = scheduleStatus['isScheduleOpen'] as bool;
 
-      bool isScheduleOpen = false;
-      if (workingHours.isNotEmpty) {
-        final now = DateTime.now();
-        final dayName = [
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-          'sunday'
-        ][now.weekday - 1];
-        final daySchedule = workingHours[dayName];
-        if (daySchedule != null && daySchedule['isOpen'] == true) {
-          isScheduleOpen = true;
-        }
+      // CHECK: If trying to OPEN but schedule says CLOSED - show dialog
+      if (newStatus == true && !isScheduleOpen) {
+        setState(() => _togglingIds.remove(branchId));
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.schedule, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('Outside Schedule'),
+              ],
+            ),
+            content: const Text(
+              'The restaurant is closed according to the current schedule.\n\nTo open now, please update your Timings settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context); // Close the branch sheet
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const RestaurantTimingScreen()),
+                  );
+                },
+                icon: const Icon(Icons.edit_calendar, size: 16),
+                label: const Text('Update Timings'),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+              ),
+            ],
+          ),
+        );
+        return;
       }
 
-      Map<String, dynamic> updateData = {
-        'isOpen': newStatus,
-        'lastStatusUpdate': FieldValue.serverTimestamp(),
-      };
-
-      if (isScheduleOpen) {
-        updateData['manuallyClosed'] = !newStatus;
-        updateData['manuallyOpened'] = false;
-      } else {
-        updateData['manuallyOpened'] = newStatus;
-        updateData['manuallyClosed'] = false;
+      // CHECK: If trying to CLOSE but schedule says OPEN - show confirmation
+      if (newStatus == false && isScheduleOpen) {
+        setState(() => _togglingIds.remove(branchId));
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('Schedule is Active'),
+              ],
+            ),
+            content: const Text(
+              'The restaurant is currently scheduled to be OPEN.\n\nClosing it now will manually override the schedule. Are you sure?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  await _executeBranchToggle(branchId, false, isScheduleOpen);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Yes, Close'),
+              ),
+            ],
+          ),
+        );
+        return;
       }
+
+      // Standard case - execute toggle directly
+      await _executeBranchToggle(branchId, newStatus, isScheduleOpen);
+
+    } catch (e) {
+      debugPrint('Error toggling branch: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _togglingIds.remove(branchId));
+    }
+  }
+
+  Future<void> _executeBranchToggle(String branchId, bool newStatus, bool isScheduleOpen) async {
+    setState(() => _togglingIds.add(branchId));
+    
+    try {
+      // Use centralized helper to build correct update data
+      final updateData = RestaurantStatusService.buildStatusUpdateData(newStatus, isScheduleOpen);
 
       await FirebaseFirestore.instance
           .collection('Branch')
@@ -1094,19 +1169,16 @@ class _BranchStatusToggleSheetState extends State<_BranchStatusToggleSheet> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
-          backgroundColor: newStatus ? Colors.green : Colors.orange,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error toggling branch: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Branch ${newStatus ? "opened" : "closed"} successfully!'),
+            backgroundColor: newStatus ? Colors.green : Colors.orange,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
     } finally {
       setState(() => _togglingIds.remove(branchId));
     }

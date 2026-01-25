@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../main.dart';
+import 'ConnectionUtils.dart';
 
 class RestaurantTimingScreen extends StatefulWidget {
   const RestaurantTimingScreen({super.key});
@@ -24,6 +27,21 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
   List<Map<String, dynamic>> _allBranches = [];
   bool _isSuperAdmin = false;
 
+  // Kitchen Operations - Preparation Time
+  static const int _minEstimatedTime = 10;
+  static const int _maxEstimatedTime = 90;
+  static const int _defaultEstimatedTime = 20;
+  static const int _warningThreshold = 60; // Warn if setting above this
+  static const int _maxRetries = 3; // Retry attempts for failed updates
+  
+  int _preparationTime = _defaultEstimatedTime;
+  int _lastSavedPrepTime = _defaultEstimatedTime; // For rollback on error
+  bool _isUpdatingPrepTime = false;
+  DateTime? _lastPrepTimeUpdate; // Debounce tracking
+  DateTime? _estimatedTimeLastUpdatedAt; // When it was last updated in Firestore
+  StreamSubscription<DocumentSnapshot>? _branchSubscription; // Real-time sync
+  int _retryCount = 0; // Current retry attempt
+
   // Ordered list of days
   final List<String> _days = [
     'monday',
@@ -44,6 +62,12 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeScreen());
+  }
+
+  @override
+  void dispose() {
+    _branchSubscription?.cancel();
+    super.dispose();
   }
 
   // --- Initialization ---
@@ -161,18 +185,16 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
 
       if (!mounted) return;
 
-      if (doc.exists && doc.data()!.containsKey('workingHours')) {
-        final loadedHours =
-            Map<String, dynamic>.from(doc.data()!['workingHours']);
-        setState(() {
-          _workingHours = loadedHours;
-          _originalWorkingHours = Map<String, dynamic>.from(loadedHours.map(
-              (key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
-          _isLoading = false;
-        });
+      if (doc.exists) {
+        _parseEstimatedTimeFromDoc(doc.data()!);
+        _parseWorkingHoursFromDoc(doc.data()!);
       } else {
         _initializeDefaultTimings();
       }
+      
+      // Start real-time listener for external updates to estimatedTime
+      _startEstimatedTimeListener();
+      
     } catch (e) {
       debugPrint("Error loading timings: $e");
       if (mounted) {
@@ -184,6 +206,106 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         });
       }
     }
+  }
+  
+  /// Parse estimated time and timestamp from Firestore document
+  void _parseEstimatedTimeFromDoc(Map<String, dynamic> data) {
+    // Load estimated time with robust type handling
+    final rawPrepTime = data['estimatedTime'];
+    int parsedTime = _defaultEstimatedTime;
+    
+    if (rawPrepTime is int) {
+      parsedTime = rawPrepTime;
+    } else if (rawPrepTime is double) {
+      parsedTime = rawPrepTime.round();
+    } else if (rawPrepTime is String) {
+      parsedTime = int.tryParse(rawPrepTime) ?? _defaultEstimatedTime;
+    }
+    
+    // Clamp to valid bounds
+    _preparationTime = parsedTime.clamp(_minEstimatedTime, _maxEstimatedTime);
+    _lastSavedPrepTime = _preparationTime;
+    
+    // Parse last updated timestamp
+    final rawTimestamp = data['estimatedTimeUpdatedAt'];
+    if (rawTimestamp is Timestamp) {
+      _estimatedTimeLastUpdatedAt = rawTimestamp.toDate();
+    } else {
+      _estimatedTimeLastUpdatedAt = null;
+    }
+  }
+  
+  /// Parse working hours from Firestore document
+  void _parseWorkingHoursFromDoc(Map<String, dynamic> data) {
+    if (data.containsKey('workingHours')) {
+      final loadedHours = Map<String, dynamic>.from(data['workingHours']);
+      setState(() {
+        _workingHours = loadedHours;
+        _originalWorkingHours = Map<String, dynamic>.from(loadedHours.map(
+            (key, value) => MapEntry(key, Map<String, dynamic>.from(value))));
+        _isLoading = false;
+      });
+    } else {
+      _initializeDefaultTimings();
+    }
+  }
+  
+  /// Start real-time listener for estimatedTime changes from other admins
+  void _startEstimatedTimeListener() {
+    _branchSubscription?.cancel(); // Cancel any existing subscription
+    
+    if (_selectedBranchId == null || _selectedBranchId!.isEmpty) return;
+    
+    _branchSubscription = FirebaseFirestore.instance
+        .collection('Branch')
+        .doc(_selectedBranchId)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted || !snapshot.exists) return;
+      
+      final data = snapshot.data()!;
+      final rawPrepTime = data['estimatedTime'];
+      int newPrepTime = _defaultEstimatedTime;
+      
+      if (rawPrepTime is int) {
+        newPrepTime = rawPrepTime;
+      } else if (rawPrepTime is double) {
+        newPrepTime = rawPrepTime.round();
+      } else if (rawPrepTime is String) {
+        newPrepTime = int.tryParse(rawPrepTime) ?? _defaultEstimatedTime;
+      }
+      
+      newPrepTime = newPrepTime.clamp(_minEstimatedTime, _maxEstimatedTime);
+      
+      // Only update if value changed externally (not from our own update)
+      // and we're not currently in the middle of updating
+      if (newPrepTime != _lastSavedPrepTime && !_isUpdatingPrepTime) {
+        setState(() {
+          _preparationTime = newPrepTime;
+          _lastSavedPrepTime = newPrepTime;
+          
+          // Update timestamp
+          final rawTimestamp = data['estimatedTimeUpdatedAt'];
+          if (rawTimestamp is Timestamp) {
+            _estimatedTimeLastUpdatedAt = rawTimestamp.toDate();
+          }
+        });
+        
+        // Show notification that value was updated externally
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ℹ️ Estimated time updated to $newPrepTime mins by another admin'),
+              backgroundColor: Colors.blue,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }, onError: (e) {
+      debugPrint('Real-time listener error: $e');
+    });
   }
 
   void _initializeDefaultTimings() {
@@ -388,6 +510,513 @@ class _RestaurantTimingScreenState extends State<RestaurantTimingScreen> {
         ],
       ),
     );
+  }
+
+  // --- Kitchen Operations ---
+
+  Future<void> _updatePreparationTime(int newValue, {bool skipConfirmation = false}) async {
+    if (_selectedBranchId == null || _selectedBranchId!.isEmpty) return;
+    
+    // Clamp to valid bounds
+    final clampedValue = newValue.clamp(_minEstimatedTime, _maxEstimatedTime);
+    
+    // Debounce: prevent rapid updates (minimum 500ms between saves)
+    final now = DateTime.now();
+    if (_lastPrepTimeUpdate != null &&
+        now.difference(_lastPrepTimeUpdate!).inMilliseconds < 500) {
+      return;
+    }
+    
+    // Skip if value hasn't actually changed
+    if (clampedValue == _lastSavedPrepTime) return;
+    
+    // Show warning for high values (60+ mins)
+    if (!skipConfirmation && clampedValue >= _warningThreshold) {
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
+              const SizedBox(width: 12),
+              const Text('High Estimated Time'),
+            ],
+          ),
+          content: Text(
+            'Setting estimated time to $clampedValue minutes may significantly impact customer experience. '
+            'Are you sure you want to proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Revert slider to last saved value
+                setState(() => _preparationTime = _lastSavedPrepTime);
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      
+      if (shouldProceed != true) return;
+    }
+
+    // Check connectivity before attempting update
+    final hasConnection = await ConnectionUtils.hasInternetConnection();
+    if (!hasConnection) {
+      if (mounted) {
+        setState(() => _preparationTime = _lastSavedPrepTime);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text('No internet connection. Please try again.'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _updatePreparationTime(clampedValue, skipConfirmation: true),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isUpdatingPrepTime = true);
+    _lastPrepTimeUpdate = now;
+    _retryCount = 0;
+
+    await _performUpdateWithRetry(clampedValue);
+  }
+  
+  /// Performs the Firestore update with exponential backoff retry logic
+  Future<void> _performUpdateWithRetry(int clampedValue) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('Branch')
+          .doc(_selectedBranchId)
+          .set({
+            'estimatedTime': clampedValue,
+            'estimatedTimeUpdatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 10));
+
+      // Update last saved value and timestamp on success
+      _lastSavedPrepTime = clampedValue;
+      _estimatedTimeLastUpdatedAt = DateTime.now();
+      _retryCount = 0;
+      
+      // Haptic feedback on success
+      HapticFeedback.lightImpact();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Estimated time updated to $clampedValue mins'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating estimated time (attempt ${_retryCount + 1}): $e');
+      
+      // Retry with exponential backoff
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        final delaySeconds = 1 << (_retryCount - 1); // 1s, 2s, 4s
+        debugPrint('Retrying in $delaySeconds seconds...');
+        
+        await Future.delayed(Duration(seconds: delaySeconds));
+        
+        if (mounted) {
+          await _performUpdateWithRetry(clampedValue);
+        }
+        return;
+      }
+      
+      // All retries exhausted - rollback and show error
+      if (mounted) {
+        setState(() => _preparationTime = _lastSavedPrepTime);
+        
+        // Haptic feedback for error
+        HapticFeedback.heavyImpact();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed after $_maxRetries retries. Reverted to $_lastSavedPrepTime mins.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () {
+                _retryCount = 0;
+                _updatePreparationTime(clampedValue, skipConfirmation: true);
+              },
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted && _retryCount == 0) {
+        // Only set loading false if we're done (not retrying)
+        setState(() => _isUpdatingPrepTime = false);
+      } else if (mounted && _retryCount >= _maxRetries) {
+        setState(() => _isUpdatingPrepTime = false);
+      }
+    }
+  }
+
+  Widget _buildKitchenOperationsCard() {
+    // Don't show card while initial data is loading
+    if (_isLoading) {
+      return const SizedBox.shrink();
+    }
+    
+    return Semantics(
+      label: 'Kitchen Operations. Estimated time is $_preparationTime minutes. '
+             'Use slider to adjust between $_minEstimatedTime and $_maxEstimatedTime minutes.',
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.orange.shade200, width: 1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.restaurant, color: Colors.orange.shade700, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Kitchen Operations',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Adjust estimated time during busy hours',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_isUpdatingPrepTime)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.orange,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Icon(Icons.timer_outlined, size: 18, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Estimated Time:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Show unsaved indicator
+                  if (_preparationTime != _lastSavedPrepTime && !_isUpdatingPrepTime)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(Icons.edit, size: 14, color: Colors.orange.shade600),
+                    ),
+                  // Tappable badge for direct input
+                  Semantics(
+                    button: true,
+                    label: 'Tap to enter estimated time manually',
+                    child: InkWell(
+                      onTap: _isUpdatingPrepTime ? null : _showDirectInputDialog,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          // Red tint for high values (warning zone)
+                          color: _preparationTime >= _warningThreshold 
+                              ? Colors.red.shade100 
+                              : Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _preparationTime >= _warningThreshold 
+                                ? Colors.red.shade300 
+                                : Colors.orange.shade300,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$_preparationTime mins',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: _preparationTime >= _warningThreshold 
+                                    ? Colors.red.shade800 
+                                    : Colors.orange.shade800,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 12,
+                              color: _preparationTime >= _warningThreshold 
+                                  ? Colors.red.shade600 
+                                  : Colors.orange.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  // Red tint for high values
+                  activeTrackColor: _preparationTime >= _warningThreshold 
+                      ? Colors.red.shade400 
+                      : Colors.orange,
+                  inactiveTrackColor: _preparationTime >= _warningThreshold 
+                      ? Colors.red.shade100 
+                      : Colors.orange.shade100,
+                  thumbColor: _preparationTime >= _warningThreshold 
+                      ? Colors.red.shade700 
+                      : Colors.orange.shade700,
+                  overlayColor: (_preparationTime >= _warningThreshold 
+                      ? Colors.red 
+                      : Colors.orange).withValues(alpha: 0.2),
+                  valueIndicatorColor: _preparationTime >= _warningThreshold 
+                      ? Colors.red.shade700 
+                      : Colors.orange.shade700,
+                  valueIndicatorTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                child: Slider(
+                  value: _preparationTime.toDouble().clamp(
+                      _minEstimatedTime.toDouble(), _maxEstimatedTime.toDouble()),
+                  min: _minEstimatedTime.toDouble(),
+                  max: _maxEstimatedTime.toDouble(),
+                  divisions: ((_maxEstimatedTime - _minEstimatedTime) ~/ 5), // Step size of 5
+                  label: '$_preparationTime mins',
+                  onChanged: _isUpdatingPrepTime 
+                      ? null // Disable while updating
+                      : (value) {
+                          // Haptic feedback on slider change
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _preparationTime = value.round();
+                          });
+                        },
+                  onChangeEnd: _isUpdatingPrepTime 
+                      ? null 
+                      : (value) {
+                          _updatePreparationTime(value.round());
+                        },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$_minEstimatedTime min', 
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    Text('$_maxEstimatedTime min', 
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Last updated timestamp
+              if (_estimatedTimeLastUpdatedAt != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Last updated: ${_formatLastUpdated(_estimatedTimeLastUpdatedAt!)}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This affects delivery time estimates shown to customers',
+                        style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  /// Format the last updated timestamp in a user-friendly way
+  String _formatLastUpdated(DateTime timestamp) {
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+    
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min${diff.inMinutes > 1 ? 's' : ''} ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    } else {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    }
+  }
+  
+  /// Show dialog for direct input of estimated time
+  Future<void> _showDirectInputDialog() async {
+    final controller = TextEditingController(text: _preparationTime.toString());
+    final formKey = GlobalKey<FormState>();
+    
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Set Estimated Time'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Minutes',
+                  hintText: 'Enter value ($_minEstimatedTime-$_maxEstimatedTime)',
+                  suffixText: 'mins',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.orange, width: 2),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a value';
+                  }
+                  final parsed = int.tryParse(value);
+                  if (parsed == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (parsed < _minEstimatedTime || parsed > _maxEstimatedTime) {
+                    return 'Must be between $_minEstimatedTime-$_maxEstimatedTime';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Enter a value between $_minEstimatedTime and $_maxEstimatedTime minutes.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final value = int.parse(controller.text);
+                Navigator.pop(context, value);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result != null && result != _preparationTime) {
+      setState(() => _preparationTime = result);
+      _updatePreparationTime(result);
+    }
   }
 
   // --- Time Management ---

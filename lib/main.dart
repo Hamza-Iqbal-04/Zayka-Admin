@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_app_check/firebase_app_check.dart'; // ✅ App Check for security
 import 'Screens/ConnectionUtils.dart';
 import 'Screens/MainScreen.dart';
+import 'Screens/SplashScreen.dart';
 import 'Widgets/Authorization.dart';
 import 'Widgets/RestaurantStatusService.dart';
 import 'Widgets/notification.dart';
@@ -229,7 +230,7 @@ class MyApp extends StatelessWidget {
         builder: (context, child) {
           return OfflineBanner(child: child!);
         },
-        home: const AuthWrapper(),
+        home: const SplashScreen(),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -294,7 +295,7 @@ class _ScopeLoaderState extends State<ScopeLoader> with WidgetsBindingObserver {
       }
 
       notificationService.init(scopeService, navigatorKey);
-      await FcmService().init(scopeService.userEmail);
+      await FcmService().init(scopeService.userIdentifier);
 
       // ✅ CRITICAL FIX: Process any pending notification from cold start
       // This handles the case where user tapped notification while app was terminated
@@ -421,11 +422,13 @@ class UserScopeService with ChangeNotifier {
   bool _isLoaded = false;
   bool _isAccountMissing = false; // ✅ New state
   String _userEmail = '';
+  String _userIdentifier = ''; // ✅ Email or phone number for staff lookup
 
   String get role => _role;
   List<String> get branchIds => _branchIds;
   String get branchId => _branchIds.isNotEmpty ? _branchIds.first : '';
   String get userEmail => _userEmail;
+  String get userIdentifier => _userIdentifier; // ✅ Primary identifier (email or phone)
   bool get isLoaded => _isLoaded;
   bool get isAccountMissing => _isAccountMissing; // ✅ Getter
   bool get isSuperAdmin => _role == 'super_admin';
@@ -442,12 +445,14 @@ class UserScopeService with ChangeNotifier {
     _scopeSubscription = null;
 
     try {
+      // ✅ Support both email and phone authentication
       _userEmail = user.email ?? '';
-      if (_userEmail.isEmpty) throw Exception('User email is null.');
+      _userIdentifier = user.email ?? user.phoneNumber ?? '';
+      if (_userIdentifier.isEmpty) throw Exception('User identifier (email or phone) is null.');
 
       final staffSnap = await _db
           .collection(AppConstants.collectionStaff)
-          .doc(_userEmail)
+          .doc(_userIdentifier)
           .get();
 
       if (!staffSnap.exists) {
@@ -471,7 +476,7 @@ class UserScopeService with ChangeNotifier {
 
       _scopeSubscription = _db
           .collection(AppConstants.collectionStaff)
-          .doc(_userEmail)
+          .doc(_userIdentifier)
           .snapshots()
           .listen(
             (snapshot) => _handleScopeUpdate(snapshot, authService),
@@ -521,6 +526,7 @@ class UserScopeService with ChangeNotifier {
     _isLoaded = false;
     _isAccountMissing = false;
     _userEmail = '';
+    _userIdentifier = '';
     notifyListeners();
   }
 }

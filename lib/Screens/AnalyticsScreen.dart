@@ -3,12 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:excel/excel.dart' as excel_lib;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../utils/responsive_helper.dart';
 import '../services/AnalyticsPdfService.dart';
+import '../Widgets/BranchFilterService.dart';
+import '../main.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -31,6 +34,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_handleTabSelection);
+    
+    // Load branch names if needed (for multi-branch users)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userScope = context.read<UserScopeService>();
+      final branchFilter = context.read<BranchFilterService>();
+      if (userScope.branchIds.length > 1 && !branchFilter.isLoaded) {
+        branchFilter.loadBranchNames(userScope.branchIds);
+      }
+    });
   }
 
   @override
@@ -67,6 +79,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final userScope = context.watch<UserScopeService>();
+    final branchFilter = context.watch<BranchFilterService>();
+    final bool showBranchSelector = userScope.branchIds.length > 1;
+    
+    // Get effective branch IDs for filtering
+    final effectiveBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -81,7 +100,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             fontSize: 24,
           ),
         ),
-        actions: const [], // Export button moved to body for better visibility
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: _buildOrderTypeTabs(),
@@ -92,6 +110,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Branch Selector - Full width at top
+            if (showBranchSelector) ...[
+              _buildBranchSelectorCard(userScope, branchFilter),
+              const SizedBox(height: 16),
+            ],
             _buildDateRangeSelector(),
             const SizedBox(height: 16),
 
@@ -120,7 +143,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             const SizedBox(height: 32),
 
             // Analytics Overview Cards
-            _buildAnalyticsOverviewCards(),
+            _buildAnalyticsOverviewCards(effectiveBranchIds),
             const SizedBox(height: 32),
 
             // ✅ RESPONSIVE LAYOUT
@@ -135,11 +158,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                       children: [
                         buildSectionHeader('Sales Trend', Icons.trending_up),
                         const SizedBox(height: 16),
-                        _buildSalesChart(),
+                        _buildSalesChart(effectiveBranchIds),
                         const SizedBox(height: 32),
                         buildSectionHeader('Performance', Icons.star_border),
                         const SizedBox(height: 16),
-                        _buildTopItemsList(),
+                        _buildTopItemsList(effectiveBranchIds),
                       ],
                     ),
                   ),
@@ -152,7 +175,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         buildSectionHeader(
                             'Distribution', Icons.pie_chart_outline),
                         const SizedBox(height: 16),
-                        _buildOrderTypeDistributionChart(),
+                        _buildOrderTypeDistributionChart(effectiveBranchIds),
                       ],
                     ),
                   ),
@@ -164,27 +187,27 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 children: [
                   buildSectionHeader('Sales Trend', Icons.trending_up),
                   const SizedBox(height: 16),
-                  _buildSalesChart(),
+                  _buildSalesChart(effectiveBranchIds),
                   const SizedBox(height: 32),
                   buildSectionHeader('Performance', Icons.star_border),
                   const SizedBox(height: 16),
-                  _buildTopItemsList(),
+                  _buildTopItemsList(effectiveBranchIds),
                   const SizedBox(height: 32),
                   buildSectionHeader('Distribution', Icons.pie_chart_outline),
                   const SizedBox(height: 16),
-                  _buildOrderTypeDistributionChart(),
+                  _buildOrderTypeDistributionChart(effectiveBranchIds),
                 ],
               ),
             const SizedBox(height: 20),
             // NEW: Top Delivery Riders Section
             buildSectionHeader('Top Delivery Riders', Icons.delivery_dining),
             const SizedBox(height: 16),
-            _buildTopRidersList(),
+            _buildTopRidersList(effectiveBranchIds),
             const SizedBox(height: 32),
             // NEW: Top Customers Section
             buildSectionHeader('Top Customers', Icons.people_outline),
             const SizedBox(height: 16),
-            _buildTopCustomersList(),
+            _buildTopCustomersList(effectiveBranchIds),
           ],
         ),
       ),
@@ -236,6 +259,213 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       ),
     );
   }
+
+  // Branch selector as a full-width card (placed in body for better visibility)
+  Widget _buildBranchSelectorCard(
+      UserScopeService userScope, BranchFilterService branchFilter) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.store_rounded,
+              color: Colors.deepPurple,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Branch',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  branchFilter.selectedBranchId == null
+                      ? 'All Branches'
+                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            offset: const Offset(0, 45),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'Change',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: BranchFilterService.allBranchesValue,
+                child: Row(children: [
+                  Icon(
+                      branchFilter.selectedBranchId == null
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 20,
+                      color: branchFilter.selectedBranchId == null
+                          ? Colors.deepPurple
+                          : Colors.grey),
+                  const SizedBox(width: 12),
+                  const Text('All Branches', style: TextStyle(fontSize: 15)),
+                ]),
+              ),
+              const PopupMenuDivider(),
+              ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
+                    value: branchId,
+                    child: Row(children: [
+                      Icon(
+                          branchFilter.selectedBranchId == branchId
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          size: 20,
+                          color: branchFilter.selectedBranchId == branchId
+                              ? Colors.deepPurple
+                              : Colors.grey),
+                      const SizedBox(width: 12),
+                      Flexible(
+                          child: Text(branchFilter.getBranchName(branchId),
+                              style: const TextStyle(fontSize: 15),
+                              overflow: TextOverflow.ellipsis)),
+                    ]),
+                  )),
+            ],
+            onSelected: (value) => branchFilter.selectBranch(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Branch selector dropdown (kept for reference, not used currently)
+  Widget _buildBranchSelector(
+      UserScopeService userScope, BranchFilterService branchFilter) {
+    return Container(
+      margin: const EdgeInsets.only(right: 16),
+      child: PopupMenuButton<String>(
+        offset: const Offset(0, 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.deepPurple.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.deepPurple.withOpacity(0.4), width: 1.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.store_rounded, size: 20, color: Colors.deepPurple),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Text(
+                  branchFilter.selectedBranchId == null
+                      ? 'All Branches'
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
+                  style: const TextStyle(
+                    color: Colors.deepPurple,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.keyboard_arrow_down_rounded, color: Colors.deepPurple, size: 24),
+            ],
+          ),
+        ),
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: BranchFilterService.allBranchesValue,
+            child: Row(children: [
+              Icon(
+                  branchFilter.selectedBranchId == null
+                      ? Icons.check_circle
+                      : Icons.circle_outlined,
+                  size: 20,
+                  color: branchFilter.selectedBranchId == null
+                      ? Colors.deepPurple
+                      : Colors.grey),
+              const SizedBox(width: 12),
+              const Text('All Branches', style: TextStyle(fontSize: 15)),
+            ]),
+          ),
+          const PopupMenuDivider(),
+          ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
+                value: branchId,
+                child: Row(children: [
+                  Icon(
+                      branchFilter.selectedBranchId == branchId
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 20,
+                      color: branchFilter.selectedBranchId == branchId
+                          ? Colors.deepPurple
+                          : Colors.grey),
+                  const SizedBox(width: 12),
+                  Flexible(
+                      child: Text(branchFilter.getBranchName(branchId),
+                          style: const TextStyle(fontSize: 15),
+                          overflow: TextOverflow.ellipsis)),
+                ]),
+              )),
+        ],
+        onSelected: (value) => branchFilter.selectBranch(value),
+      ),
+    );
+  }
+
 
   Widget _buildDateRangeSelector() {
     return Column(
@@ -402,9 +632,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildAnalyticsOverviewCards() {
+  Widget _buildAnalyticsOverviewCards(List<String> branchIds) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _getOrdersQuery().snapshots(),
+      stream: _getOrdersQuery(branchIds).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -412,27 +642,46 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
         final orders = snapshot.data?.docs ?? [];
         final totalOrders = orders.length;
-        final totalRevenue = orders.fold<double>(
-          0,
-          (sum, doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return sum + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
-          },
-        );
-        final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-        // Count cancelled and refunded orders
+        // Define completed statuses for revenue calculation
+        const completedStatuses = {'delivered', 'paid', 'collected', 'served'};
+
+        // Count orders by status and collect them for detail view
         int cancelledCount = 0;
         int refundedCount = 0;
+        int completedCount = 0;
+        List<QueryDocumentSnapshot> cancelledOrders = [];
+        List<QueryDocumentSnapshot> refundedOrders = [];
+        List<QueryDocumentSnapshot> completedOrders = [];
+        
         for (var doc in orders) {
           final data = doc.data() as Map<String, dynamic>;
           final status = (data['status'] as String?)?.toLowerCase() ?? '';
           if (status == 'cancelled') {
             cancelledCount++;
+            cancelledOrders.add(doc);
           } else if (status == 'refunded') {
             refundedCount++;
+            refundedOrders.add(doc);
+          } else if (completedStatuses.contains(status)) {
+            completedCount++;
+            completedOrders.add(doc);
           }
         }
+
+        // Calculate revenue only from completed orders
+        final totalRevenue = orders.fold<double>(
+          0,
+          (sum, doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status'] as String?)?.toLowerCase() ?? '';
+            if (completedStatuses.contains(status)) {
+              return sum + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
+            }
+            return sum;
+          },
+        );
+        final avgOrderValue = completedCount > 0 ? totalRevenue / completedCount : 0;
 
         return Column(
           children: [
@@ -445,6 +694,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     totalOrders.toString(),
                     Icons.receipt_long_outlined,
                     Colors.blue,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'All Orders',
+                      orders,
+                      Colors.blue,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -454,6 +709,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     'QAR ${totalRevenue.toStringAsFixed(0)}',
                     Icons.attach_money_outlined,
                     Colors.green,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'Completed Orders',
+                      completedOrders,
+                      Colors.green,
+                      showRevenue: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -463,6 +725,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     'QAR ${avgOrderValue.toStringAsFixed(0)}',
                     Icons.trending_up_outlined,
                     Colors.orange,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'Completed Orders',
+                      completedOrders,
+                      Colors.orange,
+                      showRevenue: true,
+                    ),
                   ),
                 ),
               ],
@@ -477,6 +746,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     cancelledCount.toString(),
                     Icons.cancel_outlined,
                     Colors.red,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'Cancelled Orders',
+                      cancelledOrders,
+                      Colors.red,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -486,6 +761,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     refundedCount.toString(),
                     Icons.money_off_outlined,
                     Colors.purple,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'Refunded Orders',
+                      refundedOrders,
+                      Colors.purple,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -498,6 +779,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         : '0%',
                     Icons.warning_amber_outlined,
                     Colors.amber,
+                    onTap: () => _showOrdersDetailDialog(
+                      context,
+                      'Problematic Orders',
+                      [...cancelledOrders, ...refundedOrders],
+                      Colors.amber,
+                    ),
                   ),
                 ),
               ],
@@ -508,64 +795,498 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
+
   Widget _buildMetricCard(
-      String title, String value, IconData icon, Color color) {
+      String title, String value, IconData icon, Color color, {VoidCallback? onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 8),
+
+              // Center and scale long values
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.visible,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 2),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Shows a professional dialog with filtered order details
+  void _showOrdersDetailDialog(
+    BuildContext context,
+    String title,
+    List<QueryDocumentSnapshot> orders,
+    Color themeColor, {
+    bool showRevenue = false,
+  }) {
+    // Sort orders by timestamp (most recent first)
+    final sortedOrders = List<QueryDocumentSnapshot>.from(orders);
+    sortedOrders.sort((a, b) {
+      final aTime = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      final bTime = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      if (aTime == null || bTime == null) return 0;
+      return bTime.compareTo(aTime);
+    });
+
+    // Calculate total if showing revenue
+    double totalAmount = 0;
+    if (showRevenue) {
+      for (var doc in sortedOrders) {
+        final data = doc.data() as Map<String, dynamic>;
+        totalAmount += (data['totalAmount'] as num?)?.toDouble() ?? 0;
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: themeColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.receipt_long_rounded, color: themeColor, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: themeColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${sortedOrders.length} orders',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (showRevenue)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: themeColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'QAR ${totalAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: themeColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close_rounded, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Orders list
+              Expanded(
+                child: sortedOrders.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No orders found',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: sortedOrders.length,
+                        itemBuilder: (context, index) {
+                          final doc = sortedOrders[index];
+                          final data = doc.data() as Map<String, dynamic>;
+                          return _buildOrderDetailCard(data, themeColor, doc.id);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a professional order detail card
+  Widget _buildOrderDetailCard(Map<String, dynamic> data, Color themeColor, String orderId) {
+    final status = (data['status'] as String?) ?? 'unknown';
+    final orderType = (data['Order_type'] as String?) ?? 'unknown';
+    final totalAmount = (data['totalAmount'] as num?)?.toDouble() ?? 0;
+    final timestamp = data['timestamp'] as Timestamp?;
+    final dailyOrderNumber = data['dailyOrderNumber'] as int? ?? 0;
+    final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
+    final customerName = data['customerName'] as String? ?? '';
+    final customerPhone = data['customerPhone'] as String? ?? '';
+
+    // Format date
+    String formattedDate = 'N/A';
+    String formattedTime = 'N/A';
+    if (timestamp != null) {
+      final date = timestamp.toDate();
+      formattedDate = DateFormat('MMM dd, yyyy').format(date);
+      formattedTime = DateFormat('hh:mm a').format(date);
+    }
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Container(
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: _getStatusColor(status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 8),
-
-          // Center and scale long values
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.visible,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
+            child: Center(
+              child: Text(
+                '#$dailyOrderNumber',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: _getStatusColor(status),
+                ),
               ),
             ),
           ),
-
-          const SizedBox(height: 2),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'QAR ${totalAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              _buildStatusBadge(status),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$formattedDate • $formattedTime',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _formatOrderType(orderType),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+          children: [
+            // Customer info
+            if (customerName.isNotEmpty || customerPhone.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        customerName.isNotEmpty ? customerName : 'Customer',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (customerPhone.isNotEmpty)
+                      Text(
+                        customerPhone,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Items list
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Items (${items.length})',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ...items.map((item) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: themeColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${item['quantity'] ?? 1}x',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: themeColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item['name'] ?? 'Unknown Item',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            Builder(
+                              builder: (context) {
+                                // Use discountedPrice if available for accurate display
+                                final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
+                                final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
+                                final effectivePrice = (discountedPrice != null && discountedPrice > 0) 
+                                    ? discountedPrice 
+                                    : originalPrice;
+                                final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
+                                return Text(
+                                  'QAR ${(effectivePrice * quantity).toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// Returns color based on order status
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+      case 'paid':
+      case 'collected':
+      case 'served':
+        return Colors.green;
+      case 'preparing':
+        return Colors.orange;
+      case 'ready':
+        return Colors.blue;
+      case 'cancelled':
+        return Colors.red;
+      case 'refunded':
+        return Colors.purple;
+      case 'pending':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Builds a status badge widget
+  Widget _buildStatusBadge(String status) {
+    final color = _getStatusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  /// Formats order type for display
+  String _formatOrderType(String type) {
+    switch (type.toLowerCase()) {
+      case 'delivery':
+        return 'Delivery';
+      case 'takeaway':
+      case 'take_away':
+        return 'Takeaway';
+      case 'pickup':
+        return 'Pickup';
+      case 'dine_in':
+        return 'Dine In';
+      default:
+        return type;
+    }
   }
 
   Widget buildSectionHeader(String title, IconData icon) {
@@ -592,7 +1313,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildSalesChart() {
+  Widget _buildSalesChart(List<String> branchIds) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -610,7 +1331,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         child: SizedBox(
           height: 300,
           child: StreamBuilder<QuerySnapshot>(
-            stream: _getOrdersQuery().snapshots(),
+            stream: _getOrdersQuery(branchIds).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -712,7 +1433,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildTopItemsList() {
+  Widget _buildTopItemsList(List<String> branchIds) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -728,7 +1449,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: StreamBuilder<QuerySnapshot>(
-          stream: _getOrdersQuery().snapshots(),
+          stream: _getOrdersQuery(branchIds).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -741,25 +1462,38 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
               );
             }
 
+            // Only count items from completed orders
+            const completedStatuses = {'delivered', 'paid', 'collected', 'served'};
             final itemCounts = <String, int>{};
             final itemRevenue = <String, double>{};
 
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
+              final status = (data['status'] as String?)?.toLowerCase() ?? '';
+              
+              // Skip non-completed orders
+              if (!completedStatuses.contains(status)) continue;
+              
               final items =
                   List<Map<String, dynamic>>.from(data['items'] ?? []);
 
               for (var item in items) {
                 final itemName = item['name'] ?? 'Unknown Item';
                 final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
-                final price = (item['price'] as num?)?.toDouble() ?? 0;
+                // Use discountedPrice if available, otherwise fall back to regular price
+                // This ensures revenue calculations match actual amounts charged
+                final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
+                final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
+                final effectivePrice = (discountedPrice != null && discountedPrice > 0) 
+                    ? discountedPrice 
+                    : originalPrice;
 
                 itemCounts.update(itemName, (value) => value + quantity,
                     ifAbsent: () => quantity);
                 itemRevenue.update(
                   itemName,
-                  (value) => value + (price * quantity),
-                  ifAbsent: () => price * quantity,
+                  (value) => value + (effectivePrice * quantity),
+                  ifAbsent: () => effectivePrice * quantity,
                 );
               }
             }
@@ -871,7 +1605,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Widget _buildOrderTypeDistributionChart() {
+  Widget _buildOrderTypeDistributionChart(List<String> branchIds) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -889,15 +1623,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         child: SizedBox(
           height: 300,
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('Orders')
-                .where('timestamp',
-                    isGreaterThanOrEqualTo:
-                        Timestamp.fromDate(_dateRange.start))
-                .where('timestamp',
-                    isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
+            stream: _getOrdersQuery(branchIds).snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -1045,14 +1771,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-  Query<Map<String, dynamic>> _getOrdersQuery() {
+  Query<Map<String, dynamic>> _getOrdersQuery(List<String> branchIds) {
     Query<Map<String, dynamic>> query = FirebaseFirestore.instance
         .collection('Orders')
         .where('timestamp',
             isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
         .where('timestamp',
-            isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
-        .orderBy('timestamp', descending: true);
+            isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end));
+    
+    // Filter by branch - arrayContainsAny supports up to 30 values
+    if (branchIds.isNotEmpty) {
+      if (branchIds.length == 1) {
+        query = query.where('branchIds', arrayContains: branchIds.first);
+      } else {
+        query = query.where('branchIds', arrayContainsAny: branchIds);
+      }
+    }
+    
+    query = query.orderBy('timestamp', descending: true);
 
     if (_selectedOrderType != 'all') {
       query = query.where('Order_type', isEqualTo: _selectedOrderType);
@@ -1092,7 +1828,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     }
   }
 
-  Widget _buildTopRidersList() {
+  Widget _buildTopRidersList(List<String> branchIds) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1108,14 +1844,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: StreamBuilder<QuerySnapshot>(
-          // Simplified query - filter Order_type programmatically to avoid index issues
-          stream: FirebaseFirestore.instance
-              .collection('Orders')
-              .where('timestamp',
-                  isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
-              .where('timestamp',
-                  isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end))
-              .snapshots(),
+          // Use branch-filtered query for consistency
+          stream: _getOrdersQuery(branchIds).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return _buildEmptyState(
@@ -1282,7 +2012,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     return results;
   }
 
-  Widget _buildTopCustomersList() {
+  Widget _buildTopCustomersList(List<String> branchIds) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1298,7 +2028,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: StreamBuilder<QuerySnapshot>(
-          stream: _getOrdersQuery().snapshots(),
+          stream: _getOrdersQuery(branchIds).snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -1765,20 +2495,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       );
       final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
 
-      // Aggregate top items
+      // Aggregate top items with detailed pricing info
       final itemCounts = <String, int>{};
       final itemRevenue = <String, double>{};
+      final itemOriginalRevenue = <String, double>{}; // Revenue at original prices
+      final itemHasDiscount = <String, bool>{}; // Track if item ever had discounts
       for (var doc in orders) {
         final data = doc.data();
         final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
         for (var item in items) {
           final itemName = item['name'] ?? 'Unknown Item';
           final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
-          final price = (item['price'] as num?)?.toDouble() ?? 0;
+          // Use discountedPrice if available for accurate revenue calculation
+          final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
+          final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
+          final hasDiscount = discountedPrice != null && discountedPrice > 0 && discountedPrice < originalPrice;
+          final effectivePrice = hasDiscount ? discountedPrice! : originalPrice;
+          
           itemCounts.update(itemName, (v) => v + quantity,
               ifAbsent: () => quantity);
-          itemRevenue.update(itemName, (v) => v + (price * quantity),
-              ifAbsent: () => price * quantity);
+          itemRevenue.update(itemName, (v) => v + (effectivePrice * quantity),
+              ifAbsent: () => effectivePrice * quantity);
+          itemOriginalRevenue.update(itemName, (v) => v + (originalPrice * quantity),
+              ifAbsent: () => originalPrice * quantity);
+          if (hasDiscount) {
+            itemHasDiscount[itemName] = true;
+          }
         }
       }
       final topItems = itemCounts.entries.toList()
@@ -1789,6 +2531,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 'name': e.key,
                 'quantity': e.value,
                 'revenue': itemRevenue[e.key] ?? 0,
+                'originalRevenue': itemOriginalRevenue[e.key] ?? 0,
+                'hasDiscount': itemHasDiscount[e.key] ?? false,
+                'savings': (itemOriginalRevenue[e.key] ?? 0) - (itemRevenue[e.key] ?? 0),
               })
           .toList();
 
@@ -2048,38 +2793,74 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         ]);
       }
 
-      // ===== Top Items Sheet =====
+      // ===== Top Items Sheet with Price Breakdown =====
       final itemsSheet = excelFile['Top Items'];
       itemsSheet.appendRow([
         excel_lib.TextCellValue('Item Name'),
         excel_lib.TextCellValue('Quantity Sold'),
-        excel_lib.TextCellValue('Revenue (QAR)'),
+        excel_lib.TextCellValue('Original Revenue (QAR)'),
+        excel_lib.TextCellValue('Actual Revenue (QAR)'),
+        excel_lib.TextCellValue('Discount Given (QAR)'),
+        excel_lib.TextCellValue('Has Discount'),
       ]);
 
       final itemCounts = <String, int>{};
       final itemRevenue = <String, double>{};
+      final itemOriginalRevenue = <String, double>{};
+      final itemHasDiscount = <String, bool>{};
       for (var doc in orders) {
         final data = doc.data();
         final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
         for (var item in items) {
           final itemName = item['name'] ?? 'Unknown Item';
           final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
-          final price = (item['price'] as num?)?.toDouble() ?? 0;
+          // Use discountedPrice if available for accurate revenue calculation
+          final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
+          final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
+          final hasDiscount = discountedPrice != null && discountedPrice > 0 && discountedPrice < originalPrice;
+          final effectivePrice = hasDiscount ? discountedPrice! : originalPrice;
+          
           itemCounts.update(itemName, (v) => v + quantity,
               ifAbsent: () => quantity);
-          itemRevenue.update(itemName, (v) => v + (price * quantity),
-              ifAbsent: () => price * quantity);
+          itemRevenue.update(itemName, (v) => v + (effectivePrice * quantity),
+              ifAbsent: () => effectivePrice * quantity);
+          itemOriginalRevenue.update(itemName, (v) => v + (originalPrice * quantity),
+              ifAbsent: () => originalPrice * quantity);
+          if (hasDiscount) {
+            itemHasDiscount[itemName] = true;
+          }
         }
       }
       final sortedItems = itemCounts.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
       for (var item in sortedItems.take(20)) {
+        final originalRev = itemOriginalRevenue[item.key] ?? 0;
+        final actualRev = itemRevenue[item.key] ?? 0;
+        final discount = originalRev - actualRev;
+        final hasDiscount = itemHasDiscount[item.key] ?? false;
         itemsSheet.appendRow([
           excel_lib.TextCellValue(item.key),
           excel_lib.IntCellValue(item.value),
-          excel_lib.DoubleCellValue(itemRevenue[item.key] ?? 0),
+          excel_lib.DoubleCellValue(originalRev),
+          excel_lib.DoubleCellValue(actualRev),
+          excel_lib.DoubleCellValue(discount),
+          excel_lib.TextCellValue(hasDiscount ? 'Yes' : 'No'),
         ]);
       }
+      
+      // Add total discounts row
+      final totalOriginal = itemOriginalRevenue.values.fold<double>(0, (a, b) => a + b);
+      final totalActual = itemRevenue.values.fold<double>(0, (a, b) => a + b);
+      final totalDiscount = totalOriginal - totalActual;
+      itemsSheet.appendRow([]);
+      itemsSheet.appendRow([
+        excel_lib.TextCellValue('TOTAL'),
+        excel_lib.TextCellValue(''),
+        excel_lib.DoubleCellValue(totalOriginal),
+        excel_lib.DoubleCellValue(totalActual),
+        excel_lib.DoubleCellValue(totalDiscount),
+        excel_lib.TextCellValue(''),
+      ]);
 
       // Remove the default 'Sheet1'
       excelFile.delete('Sheet1');

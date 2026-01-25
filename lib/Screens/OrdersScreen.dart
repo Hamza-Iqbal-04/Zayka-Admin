@@ -190,7 +190,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         orderId,
         newStatus,
         reason: reason,
-        currentUserEmail: userScope.userEmail,
+        currentUserEmail: userScope.userIdentifier, // ✅ Support phone users
       );
 
       if (mounted) {
@@ -2438,7 +2438,7 @@ class _OrderPopupDialogState extends State<_OrderPopupDialog> {
         orderId,
         newStatus,
         reason: cancellationReason,
-        currentUserEmail: userScope.userEmail,
+        currentUserEmail: userScope.userIdentifier, // ✅ Support phone users
       );
 
       if (mounted) {

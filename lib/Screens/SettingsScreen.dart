@@ -8,6 +8,7 @@ import '../Widgets/Authorization.dart';
 import '../Widgets/Permissions.dart';
 import '../Widgets/notification.dart';
 import '../Widgets/BranchFilterService.dart';
+import '../Widgets/RestaurantStatusService.dart';
 import '../main.dart';
 import 'AnalyticsScreen.dart';
 import 'BranchManagement.dart';
@@ -24,9 +25,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkModeEnabled = false;
-  String _selectedLanguage = 'English';
-
   // State to track logout process
   bool _isLoggingOut = false;
 
@@ -38,25 +36,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPreferences();
     _notificationService = context.read<OrderNotificationService>();
-  }
-
-  Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _darkModeEnabled = prefs.getBool('dark_mode_enabled') ?? false;
-      _selectedLanguage = prefs.getString('selected_language') ?? 'English';
+    // Load branch names immediately when settings screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userScope = context.read<UserScopeService>();
+      final branchFilter = context.read<BranchFilterService>();
+      if (userScope.branchIds.isNotEmpty) {
+        branchFilter.loadBranchNames(userScope.branchIds);
+      }
     });
-  }
-
-  Future<void> _savePreference(String key, dynamic value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (value is bool) {
-      await prefs.setBool(key, value);
-    } else if (value is String) {
-      await prefs.setString(key, value);
-    }
   }
 
   @override
@@ -79,6 +67,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final userScope = context.watch<UserScopeService>();
     final authService = context.read<AuthService>();
+    // Listen to branch filter changes to rebuild when names are loaded
+    final branchFilter = context.watch<BranchFilterService>();
 
     // Cache permission state when first loaded
     if (_hadPermissionOnInit == null && userScope.isLoaded) {
@@ -278,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 24),
                 ],
 
-                // App Preferences Section
+                // App Preferences Section - Only Notifications
                 _buildSectionTitle('App Preferences', Icons.tune_rounded),
                 const SizedBox(height: 12),
                 _buildGroupedSettingsCard([
@@ -288,100 +278,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Push alerts & sounds',
                     iconColor: Colors.red,
                     onTap: () => _showNotificationSettings(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.dark_mode_outlined,
-                    title: 'Dark Mode',
-                    subtitle: _darkModeEnabled ? 'Enabled' : 'Disabled',
-                    iconColor: Colors.blueGrey,
-                    trailing: Switch.adaptive(
-                      value: _darkModeEnabled,
-                      activeColor: Colors.deepPurple,
-                      onChanged: (val) {
-                        setState(() => _darkModeEnabled = val);
-                        _savePreference('dark_mode_enabled', val);
-                        _showSnackBar(context,
-                            'Dark mode ${val ? 'enabled' : 'disabled'}');
-                      },
-                    ),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.language_outlined,
-                    title: 'Language',
-                    subtitle: _selectedLanguage,
-                    iconColor: Colors.purple,
-                    onTap: () => _showLanguageDialog(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.palette_outlined,
-                    title: 'Theme Color',
-                    subtitle: 'Customize appearance',
-                    iconColor: Colors.pink,
-                    onTap: () => _showThemeColorDialog(context),
-                  ),
-                ]),
-                const SizedBox(height: 24),
-
-                // Support Section
-                _buildSectionTitle(
-                    'Support & Help', Icons.support_agent_rounded),
-                const SizedBox(height: 12),
-                _buildGroupedSettingsCard([
-                  _SettingsItem(
-                    icon: Icons.help_center_outlined,
-                    title: 'Help Center',
-                    subtitle: 'FAQs & guides',
-                    iconColor: Colors.blue,
-                    onTap: () => _contactSupport(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.bug_report_outlined,
-                    title: 'Report Bug',
-                    subtitle: 'Found an issue?',
-                    iconColor: Colors.red,
-                    onTap: () => _reportBug(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.feedback_outlined,
-                    title: 'Send Feedback',
-                    subtitle: 'Share suggestions',
-                    iconColor: Colors.amber,
-                    onTap: () => _sendFeedback(context),
-                  ),
-                ]),
-                const SizedBox(height: 24),
-
-                // Legal & Info Section
-                _buildSectionTitle('Legal & Info', Icons.info_outline_rounded),
-                const SizedBox(height: 12),
-                _buildGroupedSettingsCard([
-                  _SettingsItem(
-                    icon: Icons.privacy_tip_outlined,
-                    title: 'Privacy Policy',
-                    subtitle: 'How we use your data',
-                    iconColor: Colors.teal,
-                    onTap: () => _viewPrivacyPolicy(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.description_outlined,
-                    title: 'Terms of Service',
-                    subtitle: 'User agreement',
-                    iconColor: Colors.brown,
-                    onTap: () => _viewTermsOfService(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.system_update_outlined,
-                    title: 'Check for Updates',
-                    subtitle: 'v1.2.0 (Build 45)',
-                    iconColor: Colors.green,
-                    onTap: () => _checkForUpdates(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.info_outline,
-                    title: 'About App',
-                    subtitle: 'App information',
-                    iconColor: Colors.grey,
-                    onTap: () => _showAppInfo(context),
                   ),
                 ]),
                 const SizedBox(height: 32),
@@ -399,9 +295,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildProfileCard(
       UserScopeService userScope, AuthService authService) {
-    final initials = userScope.userEmail.isNotEmpty
-        ? userScope.userEmail.substring(0, 2).toUpperCase()
+    // ✅ Support both email and phone users for initials
+    final identifier = userScope.userEmail.isNotEmpty 
+        ? userScope.userEmail 
+        : userScope.userIdentifier;
+    final initials = identifier.isNotEmpty
+        ? identifier.substring(0, 2).toUpperCase()
         : 'U';
+    
+    // Get branch names
+    final branchFilter = context.read<BranchFilterService>();
+    String branchText = '';
+    
+    if (userScope.branchIds.isEmpty) {
+      branchText = 'No Branch Assigned';
+    } else if (userScope.branchIds.length == 1) {
+      branchText = branchFilter.getBranchName(userScope.branchIds.first);
+    } else {
+      // Multiple branches
+      final names = userScope.branchIds
+          .map((id) => branchFilter.getBranchName(id))
+          .toList();
+      if (names.length > 2) {
+        branchText = '${names.take(2).join(", ")} +${names.length - 2} more';
+      } else {
+        branchText = names.join(", ");
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -460,8 +380,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ✅ Display email or phone number
                 Text(
-                  userScope.userEmail,
+                  userScope.userEmail.isNotEmpty 
+                      ? userScope.userEmail 
+                      : userScope.userIdentifier,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -486,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
-                if (userScope.branchId.isNotEmpty) ...[
+                if (userScope.branchIds.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -494,10 +417,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          userScope.branchId,
+                          branchText,
                           style:
                               TextStyle(color: Colors.grey[600], fontSize: 12),
                           overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],
@@ -506,14 +430,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          // Edit button
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
+          // Edit button - navigates to Staff Management
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const StaffManagementScreen(),
+              ),
             ),
-            child: Icon(Icons.edit_outlined, size: 20, color: Colors.grey[600]),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.edit_outlined, size: 20, color: Colors.grey[600]),
+            ),
           ),
         ],
       ),
@@ -813,15 +744,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _showNotificationSettings(BuildContext context) {
     showDialog(
       context: context,
@@ -861,251 +783,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showLanguageDialog(BuildContext context) {
-    final languages = ['English', 'Arabic', 'Hindi', 'Spanish', 'French'];
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: languages
-              .map((language) => _LanguageOption(
-                    language: language,
-                    code: _getLanguageCode(language),
-                    isSelected: language == _selectedLanguage,
-                    onTap: () {
-                      setState(() => _selectedLanguage = language);
-                      _savePreference('selected_language', language);
-                      Navigator.pop(context);
-                      _showSnackBar(context, 'Language changed to $language');
-                    },
-                  ))
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  void _showThemeColorDialog(BuildContext context) {
-    final colors = [
-      Colors.deepPurple,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.pink,
-      Colors.teal,
-    ];
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Theme Color'),
-        content: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: colors
-              .map((color) => GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showSnackBar(context, 'Theme color updated');
-                    },
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _contactSupport(BuildContext context) async {
-    const email = 'support@yourapp.com';
-    const subject = 'Support Request - Admin App';
-    const body = 'Hello Support Team,\n\nI need assistance with:';
-    final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      _showSnackBar(context, 'Could not launch email app');
-    }
-  }
-
-  Future<void> _reportBug(BuildContext context) async {
-    const email = 'bugs@yourapp.com';
-    const subject = 'Bug Report - Admin App';
-    const body =
-        'Bug Description:\nSteps to reproduce:\nExpected behavior:\nActual behavior:';
-    final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      _showSnackBar(context, 'Could not launch email app');
-    }
-  }
-
-  Future<void> _sendFeedback(BuildContext context) async {
-    const email = 'feedback@yourapp.com';
-    const subject = 'App Feedback - Admin App';
-    const body = 'I would like to share the following feedback:';
-    final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      _showSnackBar(context, 'Could not launch email app');
-    }
-  }
-
-  Future<void> _viewPrivacyPolicy(BuildContext context) async {
-    const url = 'https://yourapp.com/privacy';
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) _showSnackBar(context, 'Could not open privacy policy');
-      }
-    } catch (e) {
-      debugPrint('Error launching URL: $e');
-      if (mounted) _showSnackBar(context, 'Error opening privacy policy');
-    }
-  }
-
-  Future<void> _viewTermsOfService(BuildContext context) async {
-    const url = 'https://yourapp.com/terms';
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) _showSnackBar(context, 'Could not open terms of service');
-      }
-    } catch (e) {
-      debugPrint('Error launching URL: $e');
-      if (mounted) _showSnackBar(context, 'Error opening terms of service');
-    }
-  }
-
-  void _showAppInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.deepPurple),
-            const SizedBox(width: 12),
-            const Text('App Information'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _AppInfoItem(title: 'Version', value: '1.2.0'),
-            _AppInfoItem(title: 'Build Number', value: '45'),
-            _AppInfoItem(title: 'Last Updated', value: '2024-01-15'),
-            _AppInfoItem(title: 'Developer', value: 'Zayka Admin'),
-            _AppInfoItem(title: 'Package Name', value: 'com.zayka.admin'),
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.flutter_dash, size: 16, color: Colors.blue[400]),
-                const SizedBox(width: 8),
-                Text('Built with Flutter',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _checkForUpdates(BuildContext context) {
-    // Show initial loading state
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        // Simulate checking after 1.5 seconds
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (Navigator.of(dialogContext).canPop()) {
-            Navigator.of(dialogContext).pop();
-            // Show result
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                title: Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green[600]),
-                    const SizedBox(width: 12),
-                    const Text('Up to Date'),
-                  ],
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'You are using the latest version (v1.2.0)',
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Last checked: Just now',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                    ),
-                  ],
-                ),
-                actions: [
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
-          }
-        });
-
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Checking for Updates'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: Colors.deepPurple),
-              SizedBox(height: 24),
-              Text('Checking for the latest version...'),
-              SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1168,23 +845,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  String _getLanguageCode(String language) {
-    switch (language) {
-      case 'English':
-        return 'US';
-      case 'Arabic':
-        return 'SA';
-      case 'Hindi':
-        return 'IN';
-      case 'Spanish':
-        return 'ES';
-      case 'French':
-        return 'FR';
-      default:
-        return 'US';
-    }
-  }
 }
 
 class _NotificationSettingItem extends StatelessWidget {
@@ -1214,79 +874,6 @@ class _NotificationSettingItem extends StatelessWidget {
   }
 }
 
-class _LanguageOption extends StatelessWidget {
-  final String language;
-  final String code;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _LanguageOption({
-    required this.language,
-    required this.code,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Text(
-        _getFlagEmoji(code),
-        style: const TextStyle(fontSize: 20),
-      ),
-      title: Text(language),
-      trailing: isSelected
-          ? const Icon(Icons.check_circle, color: Colors.deepPurple)
-          : null,
-      onTap: onTap,
-    );
-  }
-
-  String _getFlagEmoji(String countryCode) {
-    final int firstLetter = countryCode.codeUnitAt(0) - 0x41 + 0x1F1E6;
-    final int secondLetter = countryCode.codeUnitAt(1) - 0x41 + 0x1F1E6;
-    return String.fromCharCode(firstLetter) + String.fromCharCode(secondLetter);
-  }
-}
-
-class _AppInfoItem extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _AppInfoItem({required this.title, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            '$title: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(value),
-        ],
-      ),
-    );
-  }
-}
-
-class _BranchSettingItem extends StatelessWidget {
-  final String title;
-  final VoidCallback onTap;
-
-  const _BranchSettingItem({required this.title, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: onTap,
-    );
-  }
-}
 
 // -----------------------------------------------------------------------------
 // STAFF MANAGEMENT SCREEN (Unchanged from previous fix, included for completeness)
@@ -2152,9 +1739,6 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
                               value: 'branch_admin',
                               child: Text('Branch Admin')),
                           DropdownMenuItem(
-                              value: 'branch_admin',
-                              child: Text('Branch Admin')),
-                          DropdownMenuItem(
                               value: 'super_admin', child: Text('Super Admin')),
                           DropdownMenuItem(
                               value: 'server', child: Text('Server')),
@@ -2305,61 +1889,6 @@ class _StaffEditDialogState extends State<_StaffEditDialog> {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ✅ NEW: SuperAdmin-aware status card with branch selector
 class _SuperAdminStatusCard extends StatefulWidget {
@@ -2449,57 +1978,109 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
     setState(() => _isToggling = true);
 
     try {
-      // Determine if schedule is open (simplified - just use current status context)
-      final doc = await FirebaseFirestore.instance
-          .collection('Branch')
-          .doc(_selectedBranchId)
-          .get();
+      // Use centralized helper for accurate timezone-aware schedule check
+      final scheduleStatus = await RestaurantStatusService.checkBranchScheduleStatus(_selectedBranchId!);
+      final isScheduleOpen = scheduleStatus['isScheduleOpen'] as bool;
 
-      final data = doc.data() ?? {};
-      final workingHours = data['workingHours'] as Map<String, dynamic>? ?? {};
-
-      // Simple schedule check
-      bool isScheduleOpen = false;
-      if (workingHours.isNotEmpty) {
-        final now = DateTime.now();
-        final dayName = [
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
-          'sunday'
-        ][now.weekday - 1];
-        final daySchedule = workingHours[dayName];
-        if (daySchedule != null && daySchedule['isOpen'] == true) {
-          isScheduleOpen = true;
-        }
+      // CHECK: If trying to OPEN but schedule says CLOSED - show dialog
+      if (newStatus == true && !isScheduleOpen) {
+        setState(() => _isToggling = false);
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.schedule, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('Outside Schedule'),
+              ],
+            ),
+            content: const Text(
+              'The restaurant is closed according to the current schedule.\n\nTo open now, please update your Timings settings.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const RestaurantTimingScreen()),
+                  );
+                },
+                icon: const Icon(Icons.edit_calendar, size: 16),
+                label: const Text('Update Timings'),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+              ),
+            ],
+          ),
+        );
+        return;
       }
 
-      // Set appropriate flags
-      Map<String, dynamic> updateData = {
-        'isOpen': newStatus,
-        'lastStatusUpdate': FieldValue.serverTimestamp(),
-      };
+      // CHECK: If trying to CLOSE but schedule says OPEN - show confirmation
+      if (newStatus == false && isScheduleOpen) {
+        setState(() => _isToggling = false);
+        if (!mounted) return;
 
-      if (isScheduleOpen) {
-        if (!newStatus) {
-          updateData['manuallyClosed'] = true;
-          updateData['manuallyOpened'] = false;
-        } else {
-          updateData['manuallyClosed'] = false;
-          updateData['manuallyOpened'] = false;
-        }
-      } else {
-        if (newStatus) {
-          updateData['manuallyOpened'] = true;
-          updateData['manuallyClosed'] = false;
-        } else {
-          updateData['manuallyClosed'] = false;
-          updateData['manuallyOpened'] = false;
-        }
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Row(
+              children: const [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                SizedBox(width: 10),
+                Text('Schedule is Active'),
+              ],
+            ),
+            content: const Text(
+              'The restaurant is currently scheduled to be OPEN.\n\nClosing it now will manually override the schedule. Are you sure?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  await _executeToggle(false, isScheduleOpen);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Yes, Close'),
+              ),
+            ],
+          ),
+        );
+        return;
       }
+
+      // Standard case - execute toggle directly
+      await _executeToggle(newStatus, isScheduleOpen);
+    } catch (e) {
+      debugPrint('Error in toggle status: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+      setState(() => _isToggling = false);
+    }
+  }
+
+  Future<void> _executeToggle(bool newStatus, bool isScheduleOpen) async {
+    setState(() => _isToggling = true);
+    
+    try {
+      // Use centralized helper to build correct update data
+      final updateData = RestaurantStatusService.buildStatusUpdateData(newStatus, isScheduleOpen);
 
       await FirebaseFirestore.instance
           .collection('Branch')
