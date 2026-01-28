@@ -9,12 +9,15 @@ import '../Widgets/Permissions.dart';
 import '../Widgets/notification.dart';
 import '../Widgets/BranchFilterService.dart';
 import '../Widgets/RestaurantStatusService.dart';
+import '../utils/responsive_helper.dart'; // ✅ Added
 import '../main.dart';
 import 'AnalyticsScreen.dart';
 import 'BranchManagement.dart';
 import 'CouponsScreen.dart';
 import 'OrderHistory.dart';
 import 'RestaurantTimingScreen.dart';
+import 'StaffManagementScreen.dart'; // ✅ Added
+import 'SettingsScreenLarge.dart'; // ✅ Added
 import 'TableManagement.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -49,6 +52,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ RESPONSIVE CHECK
+    if (ResponsiveHelper.isDesktop(context)) {
+      return const SettingsScreenLarge();
+    }
+
     // Check if logging out FIRST to prevent Access Denied flicker
     if (_isLoggingOut) {
       return const Scaffold(
@@ -296,17 +304,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildProfileCard(
       UserScopeService userScope, AuthService authService) {
     // ✅ Support both email and phone users for initials
-    final identifier = userScope.userEmail.isNotEmpty 
-        ? userScope.userEmail 
+    final identifier = userScope.userEmail.isNotEmpty
+        ? userScope.userEmail
         : userScope.userIdentifier;
-    final initials = identifier.isNotEmpty
-        ? identifier.substring(0, 2).toUpperCase()
-        : 'U';
-    
+    final initials =
+        identifier.isNotEmpty ? identifier.substring(0, 2).toUpperCase() : 'U';
+
     // Get branch names
     final branchFilter = context.read<BranchFilterService>();
     String branchText = '';
-    
+
     if (userScope.branchIds.isEmpty) {
       branchText = 'No Branch Assigned';
     } else if (userScope.branchIds.length == 1) {
@@ -382,8 +389,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 // ✅ Display email or phone number
                 Text(
-                  userScope.userEmail.isNotEmpty 
-                      ? userScope.userEmail 
+                  userScope.userEmail.isNotEmpty
+                      ? userScope.userEmail
                       : userScope.userIdentifier,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
@@ -443,7 +450,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.edit_outlined, size: 20, color: Colors.grey[600]),
+              child:
+                  Icon(Icons.edit_outlined, size: 20, color: Colors.grey[600]),
             ),
           ),
         ],
@@ -792,55 +800,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign Out'),
-        content:
-            const Text('Are you sure you want to sign out of your account?'),
+        content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // -----------------------------------------------------------
-              // ✅ CRITICAL FIX: Capture references BEFORE async gaps.
-              // If we don't do this, 'context' might be deactivated/unstable
-              // after 'await authService.signOut()', causing the crash.
-              // -----------------------------------------------------------
-              final navigator = Navigator.of(context);
-              final userScope = context.read<UserScopeService>();
-
-              // 1. Close the Dialog
-              navigator.pop();
-
-              // 2. Set State to 'logging out' immediately to prevent
-              // the "Access Denied" widget from rendering during teardown.
-              if (mounted) {
-                setState(() {
-                  _isLoggingOut = true;
-                });
-              }
-
-              try {
-                // 3. Clear scope first (safe to do since we captured the instance)
-                await userScope.clearScope();
-
-                // 4. Sign Out
-                await authService.signOut();
-              } catch (e) {
-                debugPrint("Error during logout: $e");
-              } finally {
-                // 5. Force Navigate using captured navigator
-                // We use pushAndRemoveUntil to clear the entire stack,
-                // ensuring the user lands on AuthWrapper/LoginScreen clean.
-                navigator.pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AuthWrapper()),
-                  (route) => false,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sign Out'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                authService.signOut();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Sign Out')),
         ],
       ),
     );
@@ -873,1022 +844,6 @@ class _NotificationSettingItem extends StatelessWidget {
     );
   }
 }
-
-
-// -----------------------------------------------------------------------------
-// STAFF MANAGEMENT SCREEN (Unchanged from previous fix, included for completeness)
-// -----------------------------------------------------------------------------
-
-class StaffManagementScreen extends StatefulWidget {
-  const StaffManagementScreen({super.key});
-
-  @override
-  State<StaffManagementScreen> createState() => _StaffManagementScreenState();
-}
-
-class _StaffManagementScreenState extends State<StaffManagementScreen> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-
-  // Track if we had permission initially (to avoid flash during scope reload)
-  bool? _hadPermissionOnInit;
-
-  @override
-  Widget build(BuildContext context) {
-    final userScope = context.watch<UserScopeService>();
-    final branchFilter = context.watch<BranchFilterService>();
-
-    // Cache the initial permission state
-    if (_hadPermissionOnInit == null && userScope.isLoaded) {
-      _hadPermissionOnInit =
-          userScope.isSuperAdmin && userScope.can(Permissions.canManageStaff);
-    }
-
-    // Show loading indicator while scope is loading/reloading
-    // This prevents flashing "Access Denied" during state transitions
-    if (!userScope.isLoaded) {
-      return Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          iconTheme: const IconThemeData(color: Colors.deepPurple),
-          title: const Text(
-            'Manage Staff',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.deepPurple,
-              fontSize: 24,
-            ),
-          ),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Colors.deepPurple),
-              SizedBox(height: 16),
-              Text('Loading...', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Only show Access Denied if we genuinely don't have permission
-    // and it's not just a transitional state
-    if (!userScope.isSuperAdmin || !userScope.can(Permissions.canManageStaff)) {
-      // If we had permission before and now don't, it might be a reload flash
-      // Give it a moment - show loading briefly
-      if (_hadPermissionOnInit == true) {
-        return Scaffold(
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: Colors.white,
-            iconTheme: const IconThemeData(color: Colors.deepPurple),
-            title: const Text(
-              'Manage Staff',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-                fontSize: 24,
-              ),
-            ),
-          ),
-          body: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Colors.deepPurple),
-                SizedBox(height: 16),
-                Text('Refreshing...', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-          ),
-        );
-      }
-
-      return Scaffold(
-        appBar: AppBar(title: const Text('Access Denied')),
-        body: const Center(
-          child: Text('❌ You do not have permission to manage staff.'),
-        ),
-      );
-    }
-
-    // Update cached permission state
-    _hadPermissionOnInit = true;
-
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        centerTitle: !(userScope.branchIds.length > 1), // Center if no selector
-        iconTheme: const IconThemeData(color: Colors.deepPurple),
-        title: const Text(
-          'Manage Staff',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.deepPurple,
-            fontSize: 24,
-          ),
-        ),
-        actions: [
-          if (userScope.branchIds.length > 1)
-            // Reuse the selector widget logic or extract it.
-            // Since it's private in other files, I'll inline a simple version or use a shared widget?
-            // Ideally I should have made it a shared widget. I'll duplicate for safety now to avoid wide refactor.
-            _buildBranchSelector(userScope, branchFilter),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              tooltip: 'Add New Staff',
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.add, color: Colors.deepPurple),
-              ),
-              onPressed: () => _showAddStaffDialog(userScope.userEmail),
-            ),
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _getStaffQuery(userScope, branchFilter),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final staffMembers = snapshot.data?.docs ?? [];
-
-          // Separate list logic
-          // 1. Fetch current user data (if not in list, we might need a separate stream,
-          // but for now, we scan the list OR rely on the fact that SuperAdmins usually see themselves.
-          // BUT if filter excludes me, I am not in `staffMembers`.
-
-          // To guarantee "Me" shows up, we need a separate stream for "Me" if I'm not in the query results?
-          // Or just query "Me" always.
-
-          return CustomScrollView(
-            slivers: [
-              // 1. My Profile Section (Always Visible)
-              SliverToBoxAdapter(
-                child: StreamBuilder<DocumentSnapshot>(
-                  stream: _db
-                      .collection('staff')
-                      .doc(userScope.userEmail)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData || !snapshot.data!.exists)
-                      return const SizedBox.shrink();
-                    final data = snapshot.data!.data() as Map<String, dynamic>;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
-                      child: _StaffCard(
-                        staffId: userScope.userEmail!,
-                        data: data,
-                        isSelf: true,
-                        onEdit: () => _showEditStaffDialog(
-                            userScope.userEmail!, data, true),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // 2. Staff List (Filtered)
-              if (staffMembers.isEmpty)
-                const SliverFillRemaining(
-                  child: Center(
-                    child: Text(
-                      'No staff members found matching filter',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final staff = staffMembers[index];
-                      // Skip self because it's shown at top
-                      if (staff.id == userScope.userEmail)
-                        return const SizedBox.shrink();
-
-                      final data = staff.data() as Map<String, dynamic>;
-                      return Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 8),
-                            child: _StaffCard(
-                              staffId: staff.id,
-                              data: data,
-                              isSelf: false,
-                              onEdit: () =>
-                                  _showEditStaffDialog(staff.id, data, false),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    childCount: staffMembers.length,
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _showAddStaffDialog(String currentUserEmail) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _StaffEditDialog(
-        isEditing: false,
-        isSelf: false,
-        onSave: (staffData) => _addStaffMember(staffData),
-      ),
-    );
-  }
-
-  void _showEditStaffDialog(
-      String staffId, Map<String, dynamic> currentData, bool isSelf) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _StaffEditDialog(
-        isEditing: true,
-        isSelf: isSelf,
-        currentData: currentData,
-        onSave: (staffData) => _updateStaffMember(staffId, staffData),
-      ),
-    );
-  }
-
-  Future<void> _addStaffMember(Map<String, dynamic> staffData) async {
-    final String email = staffData['email'];
-
-    try {
-      final docRef = _db.collection('staff').doc(email);
-      final docSnapshot = await docRef.get();
-
-      if (docSnapshot.exists) {
-        if (mounted) {
-          _showSnackBar('❌ User with email $email already exists.',
-              isError: true);
-        }
-        return;
-      }
-
-      // ✅ IMPROVED: Clean staff document structure
-      // FCM tokens are stored in subcollection 'tokens', not at root level
-      await docRef.set({
-        // Core user info
-        'name': staffData['name'],
-        'email': email,
-        'phone': staffData['phone'] ?? '', // ✅ Include phone
-        'role': staffData['role'],
-        'isActive': true,
-
-        // Branch assignments
-        'branchIds': staffData['branchIds'] ?? [],
-
-        // Permissions
-        'permissions': staffData['permissions'] ?? {},
-
-        // Metadata
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdBy': context.read<UserScopeService>().userEmail,
-        'lastUpdated': FieldValue.serverTimestamp(),
-
-        // NOTE: FCM tokens are now stored in subcollection 'staff/{email}/tokens'
-        // No need to store fcmToken or fcmTokenUpdated at root level
-      });
-
-      if (mounted) {
-        _showSnackBar('✅ Staff member "$email" added successfully');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Error adding staff: $e', isError: true);
-      }
-    }
-  }
-
-  Future<void> _updateStaffMember(
-      String staffId, Map<String, dynamic> staffData) async {
-    try {
-      final userScope = context.read<UserScopeService>();
-
-      // ✅ IMPROVED: Explicitly update only allowed fields, add audit metadata
-      await _db.collection('staff').doc(staffId).update({
-        'name': staffData['name'],
-        'phone': staffData['phone'] ?? '', // ✅ Include phone
-        'role': staffData['role'],
-        'isActive': staffData['isActive'],
-        'branchIds': staffData['branchIds'] ?? [],
-        'permissions': staffData['permissions'] ?? {},
-        'lastUpdated': FieldValue.serverTimestamp(),
-        'lastUpdatedBy': userScope.userEmail,
-      });
-
-      if (mounted) {
-        _showSnackBar('✅ Staff member "$staffId" updated successfully');
-      }
-      // Note: No need to manually reload scope - the real-time Firestore listener
-      // in UserScopeService automatically updates when the staff document changes
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Error updating staff: $e', isError: true);
-      }
-    }
-  }
-
-  // Removed _reloadCurrentUserScope() - the UserScopeService has a real-time
-  // Firestore listener that automatically updates when the staff document changes.
-  // Manually calling clearScope() + loadUserScope() caused a flash of "Access Denied".
-
-  // ✅ Query definition
-  Stream<QuerySnapshot> _getStaffQuery(
-      UserScopeService userScope, BranchFilterService branchFilter) {
-    Query query = _db.collection('staff');
-
-    // Always filter by branches - SuperAdmin sees only their assigned branches
-    final filterBranchIds =
-        branchFilter.getFilterBranchIds(userScope.branchIds);
-    debugPrint(
-        "DEBUG: _getStaffQuery called. FilterBranchIds: $filterBranchIds");
-
-    if (filterBranchIds.isNotEmpty) {
-      if (filterBranchIds.length == 1) {
-        debugPrint(
-            "DEBUG: Using arrayContains for single branch: ${filterBranchIds.first}");
-        query = query.where('branchIds', arrayContains: filterBranchIds.first);
-      } else {
-        debugPrint("DEBUG: Using arrayContainsAny for: $filterBranchIds");
-        query = query.where('branchIds', arrayContainsAny: filterBranchIds);
-      }
-    } else if (userScope.branchIds.isNotEmpty) {
-      // Fall back to user's assigned branches
-      if (userScope.branchIds.length == 1) {
-        query =
-            query.where('branchIds', arrayContains: userScope.branchIds.first);
-      } else {
-        query = query.where('branchIds', arrayContainsAny: userScope.branchIds);
-      }
-    } else {
-      // User with no branches - return impossible query (empty result)
-      query =
-          query.where(FieldPath.documentId, isEqualTo: 'force_empty_result');
-    }
-
-    return query.snapshots();
-  }
-
-  // ✅ Branch Selector Widget
-  Widget _buildBranchSelector(
-      UserScopeService userScope, BranchFilterService branchFilter) {
-    return Container(
-      margin: const EdgeInsets.only(right: 4),
-      child: PopupMenuButton<String>(
-        offset: const Offset(0, 45),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.deepPurple.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.deepPurple.withOpacity(0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.store, size: 18, color: Colors.deepPurple),
-              const SizedBox(width: 6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 100),
-                child: Text(
-                  branchFilter.selectedBranchId == null
-                      ? 'All Branches'
-                      : branchFilter
-                          .getBranchName(branchFilter.selectedBranchId!),
-                  style: const TextStyle(
-                    color: Colors.deepPurple,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.arrow_drop_down, color: Colors.deepPurple, size: 20),
-            ],
-          ),
-        ),
-        itemBuilder: (context) => [
-          PopupMenuItem<String>(
-            value: BranchFilterService.allBranchesValue,
-            child: Row(children: [
-              Icon(
-                  branchFilter.selectedBranchId == null
-                      ? Icons.check_circle
-                      : Icons.circle_outlined,
-                  size: 18,
-                  color: branchFilter.selectedBranchId == null
-                      ? Colors.deepPurple
-                      : Colors.grey),
-              const SizedBox(width: 10),
-              const Text('All Branches'),
-            ]),
-          ),
-          const PopupMenuDivider(),
-          ...userScope.branchIds.map((branchId) => PopupMenuItem<String>(
-                value: branchId,
-                child: Row(children: [
-                  Icon(
-                      branchFilter.selectedBranchId == branchId
-                          ? Icons.check_circle
-                          : Icons.circle_outlined,
-                      size: 18,
-                      color: branchFilter.selectedBranchId == branchId
-                          ? Colors.deepPurple
-                          : Colors.grey),
-                  const SizedBox(width: 10),
-                  Flexible(
-                      child: Text(branchFilter.getBranchName(branchId),
-                          overflow: TextOverflow.ellipsis)),
-                ]),
-              )),
-        ],
-        onSelected: (value) => branchFilter.selectBranch(value),
-      ),
-    );
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
-  }
-}
-
-class _StaffCard extends StatelessWidget {
-  final String staffId;
-  final Map<String, dynamic> data;
-  final VoidCallback onEdit;
-  final bool isSelf;
-
-  const _StaffCard({
-    required this.staffId,
-    required this.data,
-    required this.onEdit,
-    required this.isSelf,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String name = data['name'] ?? 'No Name';
-    final String email = data['email'] ?? staffId;
-    final String role = data['role'] ?? 'No Role';
-    final bool isActive = data['isActive'] ?? false;
-    final List<dynamic> branchIds = data['branchIds'] ?? [];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: isSelf ? Colors.deepPurple.withOpacity(0.03) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: isSelf
-            ? Border.all(color: Colors.deepPurple.withOpacity(0.3))
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: isSelf ? Colors.deepPurple : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Center(
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        color: isSelf ? Colors.white : Colors.grey[700],
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isSelf)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'YOU',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        email,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon:
-                      const Icon(Icons.edit_outlined, color: Colors.deepPurple),
-                  onPressed: onEdit,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _StatusBadge(
-                    label: _formatRole(role),
-                    color: Colors.blue,
-                    icon: Icons.security,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatusBadge(
-                    label: isActive ? 'Active' : 'Inactive',
-                    color: isActive ? Colors.green : Colors.red,
-                    icon: isActive ? Icons.check_circle : Icons.cancel,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _StatusBadge(
-                    label: '${branchIds.length} Branches',
-                    color: Colors.orange,
-                    icon: Icons.store,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatRole(String role) {
-    final normalized = role.toLowerCase().replaceAll('_', '');
-    if (normalized == 'superadmin') return 'Super Admin';
-    if (normalized == 'branchadmin') return 'Branch Admin';
-    if (normalized == 'superadmin') return 'Super Admin';
-    if (normalized == 'branchadmin') return 'Branch Admin';
-    if (normalized == 'server') return 'Server';
-    return role.toUpperCase();
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-
-  const _StatusBadge(
-      {required this.label, required this.color, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StaffEditDialog extends StatefulWidget {
-  final bool isEditing;
-  final bool isSelf;
-  final Map<String, dynamic>? currentData;
-  final Function(Map<String, dynamic>) onSave;
-
-  const _StaffEditDialog({
-    required this.isEditing,
-    required this.isSelf,
-    this.currentData,
-    required this.onSave,
-  });
-
-  @override
-  State<_StaffEditDialog> createState() => _StaffEditDialogState();
-}
-
-class _StaffEditDialogState extends State<_StaffEditDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController(); // ✅ NEW
-
-  String _selectedRole = 'branch_admin';
-  bool _isActive = true;
-  List<String> _selectedBranches = [];
-
-  // Email validation regex
-  static final _emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-
-  final Map<String, bool> _permissions = {
-    'canViewDashboard': true,
-    'canManageOrders': true,
-    'canManageInventory': false,
-    'canManageRiders': false,
-    'canManageSettings': false,
-    'canManageStaff': false,
-    'canManageCoupons': false,
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isEditing && widget.currentData != null) {
-      _nameController.text = widget.currentData!['name'] ?? '';
-      _emailController.text = widget.currentData!['email'] ?? '';
-      _phoneController.text = widget.currentData!['phone'] ?? ''; // ✅ NEW
-
-      String rawRole = widget.currentData!['role'] ?? 'branch_admin';
-      if (rawRole == 'superadmin') rawRole = 'super_admin';
-      if (rawRole == 'branchadmin') rawRole = 'branch_admin';
-
-      if (['super_admin', 'branch_admin', 'server'].contains(rawRole)) {
-        _selectedRole = rawRole;
-      } else {
-        _selectedRole = 'branch_admin';
-      }
-
-      _isActive = widget.currentData!['isActive'] ?? true;
-      _selectedBranches =
-          List<String>.from(widget.currentData!['branchIds'] ?? []);
-
-      final currentPermissions = widget.currentData!['permissions'] ?? {};
-      _permissions.forEach((key, value) {
-        if (currentPermissions.containsKey(key)) {
-          _permissions[key] = currentPermissions[key];
-        }
-      });
-    } else {
-      _permissions['canViewDashboard'] = true;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 800),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.isEditing ? Icons.edit_note : Icons.person_add,
-                    color: Colors.deepPurple,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.isEditing ? 'Edit Staff' : 'Add New Staff',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration:
-                            _inputDecoration('Full Name', Icons.person_outline),
-                        validator: (v) =>
-                            (v?.trim().isEmpty ?? true) ? 'Required' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        enabled: !widget.isEditing,
-                        keyboardType: TextInputType.emailAddress,
-                        textCapitalization: TextCapitalization.none,
-                        autocorrect: false,
-                        decoration: _inputDecoration(
-                                'Email Address', Icons.email_outlined)
-                            .copyWith(
-                          filled: widget.isEditing,
-                          hintText: 'user@example.com',
-                        ),
-                        validator: (v) {
-                          if (v?.trim().isEmpty ?? true)
-                            return 'Email is required';
-                          final email = v!.trim().toLowerCase();
-                          if (!_emailRegex.hasMatch(email)) {
-                            return 'Please enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-                      if (widget.isEditing)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 12),
-                          child: Text(
-                            'Email cannot be changed after creation.',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey[600]),
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-
-                      // ✅ NEW: Phone number field
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: _inputDecoration(
-                                'Phone Number (Optional)', Icons.phone_outlined)
-                            .copyWith(
-                          hintText: '+974 XXXX XXXX',
-                        ),
-                        // Phone is optional, no validator needed
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Text('Role & Access',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        onChanged: widget.isSelf
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _selectedRole = value;
-                                    // If 'server' is selected, clear all permissions by default
-                                    if (_selectedRole == 'server') {
-                                      for (var key in _permissions.keys) {
-                                        _permissions[key] = false;
-                                      }
-                                    }
-                                  });
-                                }
-                              },
-                        decoration:
-                            _inputDecoration('Select Role', Icons.security),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'branch_admin',
-                              child: Text('Branch Admin')),
-                          DropdownMenuItem(
-                              value: 'super_admin', child: Text('Super Admin')),
-                          DropdownMenuItem(
-                              value: 'server', child: Text('Server')),
-                        ],
-                      ),
-                      if (widget.isSelf)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4, left: 12),
-                          child: Text(
-                            '🚫 You cannot change your own role.',
-                            style: TextStyle(fontSize: 12, color: Colors.red),
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Account Active'),
-                        subtitle: Text(_isActive
-                            ? 'User can log in'
-                            : 'User access revoked'),
-                        value: _isActive,
-                        activeColor: Colors.deepPurple,
-                        onChanged: widget.isSelf
-                            ? null
-                            : (val) => setState(() => _isActive = val),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Assigned Branches',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      MultiBranchSelector(
-                        selectedIds: _selectedBranches,
-                        onChanged: (list) =>
-                            setState(() => _selectedBranches = list),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text('Detailed Permissions',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: _permissions.keys.map((key) {
-                            return CheckboxListTile(
-                              title: Text(_formatPermission(key)),
-                              value: _permissions[key],
-                              activeColor: Colors.deepPurple,
-                              onChanged: (val) =>
-                                  setState(() => _permissions[key] = val!),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _validateAndSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child:
-                        Text(widget.isEditing ? 'Save Changes' : 'Create User'),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _validateAndSave() {
-    if (_formKey.currentState!.validate()) {
-      // Validation: Branch Admins must have at least one branch
-      if (_selectedRole == 'branch_admin' && _selectedBranches.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                '⚠️ Branch Admins must be assigned to at least one branch.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Validation: Super Admins should also have branches for scope
-      if (_selectedRole == 'super_admin' && _selectedBranches.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                '⚠️ Super Admins should be assigned to at least one branch.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final staffData = {
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim().toLowerCase(),
-        'phone': _phoneController.text.trim(), // ✅ NEW: Include phone
-        'role': _selectedRole,
-        'isActive': _isActive,
-        'branchIds': _selectedBranches,
-        'permissions': _permissions,
-      };
-
-      widget.onSave(staffData);
-      Navigator.pop(context);
-    }
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, color: Colors.grey[600]),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-  }
-
-  String _formatPermission(String key) {
-    return key
-        .replaceFirst('can', '')
-        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(0)}')
-        .trim();
-  }
-}
-
 
 // ✅ NEW: SuperAdmin-aware status card with branch selector
 class _SuperAdminStatusCard extends StatefulWidget {
@@ -1979,14 +934,16 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
 
     try {
       // Use centralized helper for accurate timezone-aware schedule check
-      final scheduleStatus = await RestaurantStatusService.checkBranchScheduleStatus(_selectedBranchId!);
+      final scheduleStatus =
+          await RestaurantStatusService.checkBranchScheduleStatus(
+              _selectedBranchId!);
       final isScheduleOpen = scheduleStatus['isScheduleOpen'] as bool;
 
       // CHECK: If trying to OPEN but schedule says CLOSED - show dialog
       if (newStatus == true && !isScheduleOpen) {
         setState(() => _isToggling = false);
         if (!mounted) return;
-        
+
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -2003,7 +960,8 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                child:
+                    const Text('Cancel', style: TextStyle(color: Colors.grey)),
               ),
               ElevatedButton.icon(
                 onPressed: () {
@@ -2016,8 +974,8 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
                 },
                 icon: const Icon(Icons.edit_calendar, size: 16),
                 label: const Text('Update Timings'),
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple),
               ),
             ],
           ),
@@ -2046,7 +1004,8 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                child:
+                    const Text('Cancel', style: TextStyle(color: Colors.grey)),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -2077,10 +1036,11 @@ class _SuperAdminStatusCardState extends State<_SuperAdminStatusCard> {
 
   Future<void> _executeToggle(bool newStatus, bool isScheduleOpen) async {
     setState(() => _isToggling = true);
-    
+
     try {
       // Use centralized helper to build correct update data
-      final updateData = RestaurantStatusService.buildStatusUpdateData(newStatus, isScheduleOpen);
+      final updateData = RestaurantStatusService.buildStatusUpdateData(
+          newStatus, isScheduleOpen);
 
       await FirebaseFirestore.instance
           .collection('Branch')

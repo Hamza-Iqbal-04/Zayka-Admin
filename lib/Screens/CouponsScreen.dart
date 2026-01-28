@@ -94,7 +94,7 @@ class CouponManagementScreen extends StatelessWidget {
                 crossAxisSpacing: 16,
                 mainAxisSpacing:
                     16, // Use mainAxisSpacing for vertical gaps in GridView
-                childAspectRatio: 1.1,
+                childAspectRatio: 0.85,
               ),
               itemCount: docs.length,
               itemBuilder: (context, index) {
@@ -1035,45 +1035,50 @@ class _CouponDialogState extends State<CouponDialog> {
 
   Future<void> _addCoupon() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    
+
     // ✅ VALIDATION: Check date range - valid_from must be before valid_until
     if (_validFrom != null && _validUntil != null) {
       if (_validFrom!.isAfter(_validUntil!)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ "Valid From" date must be before "Valid Until" date'),
+            content:
+                Text('❌ "Valid From" date must be before "Valid Until" date'),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
     }
-    
+
     setState(() => _loading = true);
     final code = _codeCtrl.text.trim().toUpperCase();
-    
+
     // ✅ VALIDATION: Check if coupon code already exists
     try {
       final existingCoupon = await FirebaseFirestore.instance
           .collection('coupons')
           .doc(code)
           .get();
-      
+
       if (existingCoupon.exists) {
         if (mounted) {
           setState(() => _loading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ Coupon code "$code" already exists. Please use a different code.'),
+              content: Text(
+                  '❌ Coupon code "$code" already exists. Please use a different code.'),
               backgroundColor: Colors.red,
             ),
           );
         }
         return;
       }
-      
+
       final data = _formData(newCoupon: true);
-      await FirebaseFirestore.instance.collection('coupons').doc(code).set(data);
+      await FirebaseFirestore.instance
+          .collection('coupons')
+          .doc(code)
+          .set(data);
       setState(() => _loading = false);
       if (mounted) {
         Navigator.pop(context);
@@ -1096,20 +1101,21 @@ class _CouponDialogState extends State<CouponDialog> {
 
   Future<void> _editCoupon() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    
+
     // ✅ VALIDATION: Check date range - valid_from must be before valid_until
     if (_validFrom != null && _validUntil != null) {
       if (_validFrom!.isAfter(_validUntil!)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ "Valid From" date must be before "Valid Until" date'),
+            content:
+                Text('❌ "Valid From" date must be before "Valid Until" date'),
             backgroundColor: Colors.red,
           ),
         );
         return;
       }
     }
-    
+
     setState(() => _loading = true);
     try {
       final data = _formData(newCoupon: false);

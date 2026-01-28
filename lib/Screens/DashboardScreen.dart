@@ -13,6 +13,7 @@ import '../Widgets/BranchFilterService.dart'; // ✅ Branch filter
 import '../Widgets/OrderUIComponents.dart'; // ✅ Shared UI components
 import '../Widgets/CancellationDialog.dart'; // ✅ Shared cancellation dialog
 import '../utils/responsive_helper.dart'; // ✅ Responsive utility
+import 'DashboardScreenLarge.dart'; // ✅ Large Screen Implementation
 
 class DashboardScreen extends StatefulWidget {
   final Function(int) onTabChange;
@@ -55,6 +56,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveHelper.isDesktop(context)) {
+      return DashboardScreenLarge(onTabChange: widget.onTabChange);
+    }
+
     final userScope = context.watch<UserScopeService>();
     final branchFilter = context.watch<BranchFilterService>();
     final bool showBranchSelector = userScope.branchIds.length > 1;

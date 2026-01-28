@@ -8,6 +8,7 @@ import '../Widgets/CancellationDialog.dart'; // ✅ Added for CancellationReason
 import '../utils/responsive_helper.dart'; // ✅ Responsive Helper
 import '../main.dart'; // Assuming UserScopeService is here
 import '../constants.dart'; // For OrderNumberHelper
+import 'ManualAssignmentScreenLarge.dart';
 
 class ManualAssignmentScreen extends StatefulWidget {
   const ManualAssignmentScreen({super.key});
@@ -137,6 +138,11 @@ class _ManualAssignmentScreenState extends State<ManualAssignmentScreen> {
     } else if (!userScope.isSuperAdmin) {
       // Should be covered above, but safe fallback
       query = query.where('branchIds', arrayContains: userScope.branchId);
+    }
+
+    // ✅ RESPONSIVE SWITCH
+    if (ResponsiveHelper.isDesktop(context)) {
+      return const ManualAssignmentScreenLarge();
     }
 
     return Scaffold(

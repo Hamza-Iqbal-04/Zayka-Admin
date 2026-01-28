@@ -12,6 +12,7 @@ import '../utils/responsive_helper.dart';
 import '../services/AnalyticsPdfService.dart';
 import '../Widgets/BranchFilterService.dart';
 import '../main.dart';
+import '../constants.dart';
 
 class AnalyticsScreen extends StatefulWidget {
   const AnalyticsScreen({super.key});
@@ -34,7 +35,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_handleTabSelection);
-    
+
     // Load branch names if needed (for multi-branch users)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userScope = context.read<UserScopeService>();
@@ -82,10 +83,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     final userScope = context.watch<UserScopeService>();
     final branchFilter = context.watch<BranchFilterService>();
     final bool showBranchSelector = userScope.branchIds.length > 1;
-    
+
     // Get effective branch IDs for filtering
-    final effectiveBranchIds = branchFilter.getFilterBranchIds(userScope.branchIds);
-    
+    final effectiveBranchIds =
+        branchFilter.getFilterBranchIds(userScope.branchIds);
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -307,7 +309,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 Text(
                   branchFilter.selectedBranchId == null
                       ? 'All Branches'
-                      : branchFilter.getBranchName(branchFilter.selectedBranchId!),
+                      : branchFilter
+                          .getBranchName(branchFilter.selectedBranchId!),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -319,7 +322,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           ),
           PopupMenuButton<String>(
             offset: const Offset(0, 45),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
@@ -338,7 +342,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     ),
                   ),
                   SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 20),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white, size: 20),
                 ],
               ),
             ),
@@ -398,7 +403,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           decoration: BoxDecoration(
             color: Colors.deepPurple.withOpacity(0.1),
             borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.deepPurple.withOpacity(0.4), width: 1.5),
+            border: Border.all(
+                color: Colors.deepPurple.withOpacity(0.4), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -421,7 +427,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down_rounded, color: Colors.deepPurple, size: 24),
+              Icon(Icons.keyboard_arrow_down_rounded,
+                  color: Colors.deepPurple, size: 24),
             ],
           ),
         ),
@@ -465,7 +472,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       ),
     );
   }
-
 
   Widget _buildDateRangeSelector() {
     return Column(
@@ -653,7 +659,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         List<QueryDocumentSnapshot> cancelledOrders = [];
         List<QueryDocumentSnapshot> refundedOrders = [];
         List<QueryDocumentSnapshot> completedOrders = [];
-        
+
         for (var doc in orders) {
           final data = doc.data() as Map<String, dynamic>;
           final status = (data['status'] as String?)?.toLowerCase() ?? '';
@@ -681,7 +687,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             return sum;
           },
         );
-        final avgOrderValue = completedCount > 0 ? totalRevenue / completedCount : 0;
+        final avgOrderValue =
+            completedCount > 0 ? totalRevenue / completedCount : 0;
 
         return Column(
           children: [
@@ -795,9 +802,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     );
   }
 
-
   Widget _buildMetricCard(
-      String title, String value, IconData icon, Color color, {VoidCallback? onTap}) {
+      String title, String value, IconData icon, Color color,
+      {VoidCallback? onTap}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -874,8 +881,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
     // Sort orders by timestamp (most recent first)
     final sortedOrders = List<QueryDocumentSnapshot>.from(orders);
     sortedOrders.sort((a, b) {
-      final aTime = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
-      final bTime = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      final aTime =
+          (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+      final bTime =
+          (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
       if (aTime == null || bTime == null) return 0;
       return bTime.compareTo(aTime);
     });
@@ -925,7 +934,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         color: themeColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(Icons.receipt_long_rounded, color: themeColor, size: 24),
+                      child: Icon(Icons.receipt_long_rounded,
+                          color: themeColor, size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -953,7 +963,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     ),
                     if (showRevenue)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: themeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -982,11 +993,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[300]),
+                            Icon(Icons.inbox_outlined,
+                                size: 64, color: Colors.grey[300]),
                             const SizedBox(height: 16),
                             Text(
                               'No orders found',
-                              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+                              style: TextStyle(
+                                  color: Colors.grey[500], fontSize: 16),
                             ),
                           ],
                         ),
@@ -998,7 +1011,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                         itemBuilder: (context, index) {
                           final doc = sortedOrders[index];
                           final data = doc.data() as Map<String, dynamic>;
-                          return _buildOrderDetailCard(data, themeColor, doc.id);
+                          return _buildOrderDetailCard(
+                              data, themeColor, doc.id);
                         },
                       ),
               ),
@@ -1010,7 +1024,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   /// Builds a professional order detail card
-  Widget _buildOrderDetailCard(Map<String, dynamic> data, Color themeColor, String orderId) {
+  Widget _buildOrderDetailCard(
+      Map<String, dynamic> data, Color themeColor, String orderId) {
     final status = (data['status'] as String?) ?? 'unknown';
     final orderType = (data['Order_type'] as String?) ?? 'unknown';
     final totalAmount = (data['totalAmount'] as num?)?.toDouble() ?? 0;
@@ -1099,7 +1114,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
@@ -1123,7 +1139,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline, size: 18, color: Colors.grey[600]),
+                    Icon(Icons.person_outline,
+                        size: 18, color: Colors.grey[600]),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1154,7 +1171,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                     child: Row(
                       children: [
-                        Icon(Icons.shopping_bag_outlined, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.shopping_bag_outlined,
+                            size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 8),
                         Text(
                           'Items (${items.length})',
@@ -1169,7 +1187,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                   ),
                   const Divider(height: 1),
                   ...items.map((item) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
                             Container(
@@ -1200,12 +1219,18 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                             Builder(
                               builder: (context) {
                                 // Use discountedPrice if available for accurate display
-                                final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
-                                final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
-                                final effectivePrice = (discountedPrice != null && discountedPrice > 0) 
-                                    ? discountedPrice 
-                                    : originalPrice;
-                                final quantity = (item['quantity'] as num?)?.toInt() ?? 1;
+                                final originalPrice =
+                                    (item['price'] as num?)?.toDouble() ?? 0;
+                                final discountedPrice =
+                                    (item['discountedPrice'] as num?)
+                                        ?.toDouble();
+                                final effectivePrice =
+                                    (discountedPrice != null &&
+                                            discountedPrice > 0)
+                                        ? discountedPrice
+                                        : originalPrice;
+                                final quantity =
+                                    (item['quantity'] as num?)?.toInt() ?? 1;
                                 return Text(
                                   'QAR ${(effectivePrice * quantity).toStringAsFixed(2)}',
                                   style: TextStyle(
@@ -1463,17 +1488,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             }
 
             // Only count items from completed orders
-            const completedStatuses = {'delivered', 'paid', 'collected', 'served'};
+            const completedStatuses = {
+              'delivered',
+              'paid',
+              'collected',
+              'served'
+            };
             final itemCounts = <String, int>{};
             final itemRevenue = <String, double>{};
 
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
               final status = (data['status'] as String?)?.toLowerCase() ?? '';
-              
+
               // Skip non-completed orders
               if (!completedStatuses.contains(status)) continue;
-              
+
               final items =
                   List<Map<String, dynamic>>.from(data['items'] ?? []);
 
@@ -1483,10 +1513,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 // Use discountedPrice if available, otherwise fall back to regular price
                 // This ensures revenue calculations match actual amounts charged
                 final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
-                final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
-                final effectivePrice = (discountedPrice != null && discountedPrice > 0) 
-                    ? discountedPrice 
-                    : originalPrice;
+                final discountedPrice =
+                    (item['discountedPrice'] as num?)?.toDouble();
+                final effectivePrice =
+                    (discountedPrice != null && discountedPrice > 0)
+                        ? discountedPrice
+                        : originalPrice;
 
                 itemCounts.update(itemName, (value) => value + quantity,
                     ifAbsent: () => quantity);
@@ -1778,7 +1810,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             isGreaterThanOrEqualTo: Timestamp.fromDate(_dateRange.start))
         .where('timestamp',
             isLessThanOrEqualTo: Timestamp.fromDate(_dateRange.end));
-    
+
     // Filter by branch - arrayContainsAny supports up to 30 values
     if (branchIds.isNotEmpty) {
       if (branchIds.length == 1) {
@@ -1787,7 +1819,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         query = query.where('branchIds', arrayContainsAny: branchIds);
       }
     }
-    
+
     query = query.orderBy('timestamp', descending: true);
 
     if (_selectedOrderType != 'all') {
@@ -1868,12 +1900,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             final riderCounts = <String, int>{};
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
-              final orderType =
-                  (data['Order_type'] as String?)?.toLowerCase() ?? '';
-              // Only count delivery orders
-              if (orderType != 'delivery') continue;
 
-              final riderId = data['riderId'] as String?;
+              // Use standardized normalization logic
+              final rawType =
+                  (data['Order_type'] ?? data['order_type'] ?? '').toString();
+              if (!AppConstants.isDeliveryOrder(rawType)) continue;
+
+              // Greedy extraction for rider ID
+              final riderIdRaw = (data['riderId'] ??
+                  data['rider_id'] ??
+                  data['driverId'] ??
+                  data['driver_id'] ??
+                  data['assignedRiderId'] ??
+                  (data['rider_info'] is Map
+                      ? data['rider_info']['id']
+                      : null));
+
+              final riderId = riderIdRaw?.toString().trim();
+
               if (riderId != null && riderId.isNotEmpty) {
                 riderCounts.update(riderId, (v) => v + 1, ifAbsent: () => 1);
               }
@@ -2469,13 +2513,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     try {
       // Build query with passed parameters
+      final userScope = context.read<UserScopeService>();
+      final branchFilter = context.read<BranchFilterService>();
+      final effectiveBranchIds =
+          branchFilter.getFilterBranchIds(userScope.branchIds);
+
       Query<Map<String, dynamic>> query = FirebaseFirestore.instance
           .collection('Orders')
           .where('timestamp',
               isGreaterThanOrEqualTo: Timestamp.fromDate(reportDateRange.start))
           .where('timestamp',
-              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end))
-          .orderBy('timestamp', descending: true);
+              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end));
+
+      // Filter by branch
+      if (effectiveBranchIds.isNotEmpty) {
+        if (effectiveBranchIds.length == 1) {
+          query =
+              query.where('branchIds', arrayContains: effectiveBranchIds.first);
+        } else {
+          query =
+              query.where('branchIds', arrayContainsAny: effectiveBranchIds);
+        }
+      }
+
+      query = query.orderBy('timestamp', descending: true);
 
       if (reportOrderType != 'all') {
         query = query.where('Order_type', isEqualTo: reportOrderType);
@@ -2498,8 +2559,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       // Aggregate top items with detailed pricing info
       final itemCounts = <String, int>{};
       final itemRevenue = <String, double>{};
-      final itemOriginalRevenue = <String, double>{}; // Revenue at original prices
-      final itemHasDiscount = <String, bool>{}; // Track if item ever had discounts
+      final itemOriginalRevenue =
+          <String, double>{}; // Revenue at original prices
+      final itemHasDiscount =
+          <String, bool>{}; // Track if item ever had discounts
       for (var doc in orders) {
         final data = doc.data();
         final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
@@ -2509,14 +2572,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           // Use discountedPrice if available for accurate revenue calculation
           final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
           final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
-          final hasDiscount = discountedPrice != null && discountedPrice > 0 && discountedPrice < originalPrice;
+          final hasDiscount = discountedPrice != null &&
+              discountedPrice > 0 &&
+              discountedPrice < originalPrice;
           final effectivePrice = hasDiscount ? discountedPrice! : originalPrice;
-          
+
           itemCounts.update(itemName, (v) => v + quantity,
               ifAbsent: () => quantity);
           itemRevenue.update(itemName, (v) => v + (effectivePrice * quantity),
               ifAbsent: () => effectivePrice * quantity);
-          itemOriginalRevenue.update(itemName, (v) => v + (originalPrice * quantity),
+          itemOriginalRevenue.update(
+              itemName, (v) => v + (originalPrice * quantity),
               ifAbsent: () => originalPrice * quantity);
           if (hasDiscount) {
             itemHasDiscount[itemName] = true;
@@ -2533,7 +2599,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 'revenue': itemRevenue[e.key] ?? 0,
                 'originalRevenue': itemOriginalRevenue[e.key] ?? 0,
                 'hasDiscount': itemHasDiscount[e.key] ?? false,
-                'savings': (itemOriginalRevenue[e.key] ?? 0) - (itemRevenue[e.key] ?? 0),
+                'savings': (itemOriginalRevenue[e.key] ?? 0) -
+                    (itemRevenue[e.key] ?? 0),
               })
           .toList();
 
@@ -2564,11 +2631,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
         }
       }
 
-      // Aggregate top riders (for delivery orders) using riderId
+      // Aggregate top riders (for delivery orders) using greedy ID extraction
       final riderIdCounts = <String, int>{};
       for (var doc in orders) {
         final data = doc.data();
-        final riderId = data['riderId'] as String?;
+
+        // Ensure it's a delivery order using robust check
+        final rawType =
+            (data['Order_type'] ?? data['order_type'] ?? '').toString();
+        if (!AppConstants.isDeliveryOrder(rawType)) continue;
+
+        final riderIdRaw = (data['riderId'] ??
+            data['rider_id'] ??
+            data['driverId'] ??
+            data['driver_id'] ??
+            data['assignedRiderId'] ??
+            (data['rider_info'] is Map ? data['rider_info']['id'] : null));
+
+        final riderId = riderIdRaw?.toString().trim();
+
         if (riderId != null && riderId.isNotEmpty) {
           riderIdCounts.update(riderId, (v) => v + 1, ifAbsent: () => 1);
         }
@@ -2680,13 +2761,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
 
     try {
       // Build query with passed parameters
+      final userScope = context.read<UserScopeService>();
+      final branchFilter = context.read<BranchFilterService>();
+      final effectiveBranchIds =
+          branchFilter.getFilterBranchIds(userScope.branchIds);
+
       Query<Map<String, dynamic>> query = FirebaseFirestore.instance
           .collection('Orders')
           .where('timestamp',
               isGreaterThanOrEqualTo: Timestamp.fromDate(reportDateRange.start))
           .where('timestamp',
-              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end))
-          .orderBy('timestamp', descending: true);
+              isLessThanOrEqualTo: Timestamp.fromDate(reportDateRange.end));
+
+      // Filter by branch
+      if (effectiveBranchIds.isNotEmpty) {
+        if (effectiveBranchIds.length == 1) {
+          query =
+              query.where('branchIds', arrayContains: effectiveBranchIds.first);
+        } else {
+          query =
+              query.where('branchIds', arrayContainsAny: effectiveBranchIds);
+        }
+      }
+
+      query = query.orderBy('timestamp', descending: true);
 
       if (reportOrderType != 'all') {
         query = query.where('Order_type', isEqualTo: reportOrderType);
@@ -2775,6 +2873,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
       for (var doc in orders) {
         final data = doc.data();
         final timestamp = data['timestamp'] as Timestamp?;
+        final rawType = (data['Order_type'] as String?) ??
+            (data['order_type'] as String?) ??
+            'unknown';
+
         ordersSheet.appendRow([
           excel_lib.TextCellValue(doc.id),
           excel_lib.TextCellValue(timestamp != null
@@ -2783,8 +2885,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           excel_lib.TextCellValue(data['customerName'] as String? ??
               data['customer_name'] as String? ??
               'Unknown'),
-          excel_lib.TextCellValue(_formatOrderTypeForPieLabel(
-              (data['Order_type'] as String?) ?? 'unknown')),
+          excel_lib.TextCellValue(_formatOrderTypeForPieLabel(rawType)),
           excel_lib.TextCellValue((data['status'] as String?) ?? 'unknown'),
           excel_lib.DoubleCellValue(
               (data['totalAmount'] as num?)?.toDouble() ?? 0),
@@ -2817,14 +2918,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           // Use discountedPrice if available for accurate revenue calculation
           final originalPrice = (item['price'] as num?)?.toDouble() ?? 0;
           final discountedPrice = (item['discountedPrice'] as num?)?.toDouble();
-          final hasDiscount = discountedPrice != null && discountedPrice > 0 && discountedPrice < originalPrice;
+          final hasDiscount = discountedPrice != null &&
+              discountedPrice > 0 &&
+              discountedPrice < originalPrice;
           final effectivePrice = hasDiscount ? discountedPrice! : originalPrice;
-          
+
           itemCounts.update(itemName, (v) => v + quantity,
               ifAbsent: () => quantity);
           itemRevenue.update(itemName, (v) => v + (effectivePrice * quantity),
               ifAbsent: () => effectivePrice * quantity);
-          itemOriginalRevenue.update(itemName, (v) => v + (originalPrice * quantity),
+          itemOriginalRevenue.update(
+              itemName, (v) => v + (originalPrice * quantity),
               ifAbsent: () => originalPrice * quantity);
           if (hasDiscount) {
             itemHasDiscount[itemName] = true;
@@ -2847,9 +2951,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
           excel_lib.TextCellValue(hasDiscount ? 'Yes' : 'No'),
         ]);
       }
-      
+
       // Add total discounts row
-      final totalOriginal = itemOriginalRevenue.values.fold<double>(0, (a, b) => a + b);
+      final totalOriginal =
+          itemOriginalRevenue.values.fold<double>(0, (a, b) => a + b);
       final totalActual = itemRevenue.values.fold<double>(0, (a, b) => a + b);
       final totalDiscount = totalOriginal - totalActual;
       itemsSheet.appendRow([]);

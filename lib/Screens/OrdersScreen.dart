@@ -15,6 +15,7 @@ import '../constants.dart';
 import '../Widgets/BranchFilterService.dart'; // ✅ Added
 import '../Widgets/OrderUIComponents.dart'; // ✅ Shared UI components
 import '../utils/responsive_helper.dart'; // ✅ Responsive utility
+import 'OrdersScreenLarge.dart'; // ✅ Large Screen Implementation
 
 // Service for handling cross-screen order selection/highlighting
 class OrderSelectionService {
@@ -111,11 +112,7 @@ class _OrdersScreenState extends State<OrdersScreen>
 
     // Load branch names if needed (for multi-branch users)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userScope = context.read<UserScopeService>();
-      final branchFilter = context.read<BranchFilterService>();
-      if (userScope.branchIds.length > 1 && !branchFilter.isLoaded) {
-        branchFilter.loadBranchNames(userScope.branchIds);
-      }
+      _initBranchFilter();
     });
 
     _tabController = TabController(
@@ -135,6 +132,14 @@ class _OrdersScreenState extends State<OrdersScreen>
 
     _shouldHighlightOrder =
         widget.initialOrderId != null || _orderToScrollTo != null;
+  }
+
+  void _initBranchFilter() {
+    final userScope = context.read<UserScopeService>();
+    final branchFilter = context.read<BranchFilterService>();
+    if (userScope.branchIds.length > 1 && !branchFilter.isLoaded) {
+      branchFilter.loadBranchNames(userScope.branchIds);
+    }
   }
 
   @override
@@ -224,6 +229,13 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (ResponsiveHelper.isDesktop(context)) {
+      return OrdersScreenLarge(
+        initialOrderType: widget.initialOrderType,
+        initialOrderId: widget.initialOrderId,
+      );
+    }
+
     final userScope = context.watch<UserScopeService>();
     final branchFilter = context.watch<BranchFilterService>();
     final bool showBranchSelector = userScope.branchIds.length > 1;
